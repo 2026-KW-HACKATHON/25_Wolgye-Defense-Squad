@@ -7,11 +7,11 @@ export default function KakaoShareOverlay({
   shareData,
   onSuccess
 }) {
-  if (!isOpen || !shareData) return null;
-
   const [copied, setCopied] = useState(false);
   const [calendarAdded, setCalendarAdded] = useState(false);
   const [customComment, setCustomComment] = useState('다 같이 가실 분?!');
+
+  if (!isOpen || !shareData) return null;
 
   const shareText = `[광운대 로컬 미식 AI 추천]
 🍜 ${shareData.title}
@@ -32,10 +32,11 @@ export default function KakaoShareOverlay({
           text: shareText,
           url: shareData.link
         });
-        if (onSuccess) onSuccess('카카오톡 공유가 성공적으로 전달되었습니다!');
+        if (onSuccess) onSuccess('기기 공유 절차가 완료되었습니다. 전송 내역은 선택한 앱에서 확인해주세요.');
         onClose();
         return;
       } catch (err) {
+        if (err.name === 'AbortError') return;
         if (err.name !== 'AbortError') {
           console.warn('Web Share API error, falling back to clipboard:', err);
         }
@@ -59,8 +60,11 @@ export default function KakaoShareOverlay({
     const details = encodeURIComponent(`${shareData.description}\n주소: ${shareData.address}\n\n추천: 광운대 로컬 미식 AI`);
     const location = encodeURIComponent(shareData.address);
     const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}&location=${location}`;
-    window.open(googleCalendarUrl, '_blank');
-    setCalendarAdded(true);
+    const calendarWindow = window.open(googleCalendarUrl, '_blank');
+    if (calendarWindow) {
+      calendarWindow.opener = null;
+      setCalendarAdded(true);
+    }
   };
 
   return (
@@ -86,7 +90,7 @@ export default function KakaoShareOverlay({
         {/* Body */}
         <div className="p-6">
           <p className="text-xs text-gray-500 mb-4">
-            AI 에이전트가 생성한 추천 내용을 확인하고 카카오톡으로 전송합니다.
+            추천 문구를 확인한 뒤 기기 공유창에서 앱을 선택하거나 복사해서 붙여넣으세요.
           </p>
 
           {/* Kakao Card Preview Box */}
@@ -143,7 +147,7 @@ export default function KakaoShareOverlay({
               onClick={handleAddToCalendar}
               className="rounded-lg bg-blue-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-blue-700 active:scale-95 transition-all"
             >
-              {calendarAdded ? '등록 완료' : '일정 추가'}
+              {calendarAdded ? '작성 화면 열림' : '일정 작성하기'}
             </button>
           </div>
         </div>

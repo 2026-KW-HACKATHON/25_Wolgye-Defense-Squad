@@ -45,7 +45,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
             <div className="mt-6 space-y-3 rounded-xl bg-gray-50 p-4 border border-gray-100 text-xs text-gray-700">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white font-bold">1</span>
-                <span>공강 시간 및 왕복 도보·식사 소요 시간 정밀 계산</span>
+                <span>공강 시간 및 왕복 도보·식사 소요 시간 추정 안내</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white font-bold">2</span>
@@ -66,7 +66,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
                 <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 3C6.477 3 2 6.477 2 10.767c0 2.775 1.879 5.2 4.73 6.545-.208.775-.75 2.802-.858 3.238-.135.545.198.538.417.393.173-.114 2.748-1.87 3.864-2.632.607.086 1.23.131 1.847.131 5.523 0 10-3.477 10-7.767C22 6.477 17.523 3 12 3z" />
                 </svg>
-                카카오 계정으로 간편 시작
+                카카오 로그인 화면 체험 (모의)
               </button>
 
               <button
@@ -90,9 +90,9 @@ export default function OnboardingModal({ isOpen, onComplete }) {
                   <path d="M12 3C6.477 3 2 6.477 2 10.767c0 2.775 1.879 5.2 4.73 6.545-.208.775-.75 2.802-.858 3.238-.135.545.198.538.417.393.173-.114 2.748-1.87 3.864-2.632.607.086 1.23.131 1.847.131 5.523 0 10-3.477 10-7.767C22 6.477 17.523 3 12 3z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">카카오 로그인</h3>
+              <h3 className="text-xl font-bold text-gray-900">카카오 로그인 시뮬레이션</h3>
               <p className="mt-1 text-xs text-gray-500">
-                광운대 로컬 미식 에이전트에 카카오 계정으로 연결합니다.
+                실제 계정 연결이나 권한 부여 없이 화면만 체험합니다.
               </p>
             </div>
 
@@ -114,7 +114,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
                 onClick={() => setStep('consent')}
                 className="w-full rounded-xl bg-[#FEE500] py-3.5 text-sm font-semibold text-[#191919] hover:brightness-95 active:scale-[0.98] transition-all"
               >
-                이 계정으로 로그인 (n5)
+                예시 계정으로 체험
               </button>
               <button
                 type="button"
@@ -130,7 +130,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
         {/* Step 3: 권한 동의 화면 (n7 / n8) */}
         {step === 'consent' && (
           <div className="p-6 sm:p-8">
-            <h3 className="text-xl font-bold text-gray-900">서비스 이용 권한 동의</h3>
+            <h3 className="text-xl font-bold text-gray-900">권한 동의 화면 체험</h3>
             <p className="mt-1 text-xs text-gray-500 leading-relaxed">
               식당 추천 결과 공유 및 일정 추가 기능을 위해 아래 권한에 동의해 주세요.
             </p>
@@ -199,7 +199,7 @@ export default function OnboardingModal({ isOpen, onComplete }) {
                 }
                 className="w-full rounded-xl bg-orange-600 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-700 disabled:opacity-50 active:scale-[0.98] transition-all"
               >
-                권한 동의하고 시작하기 (n8 → n9)
+                모의 동의 후 체험하기
               </button>
             </div>
           </div>

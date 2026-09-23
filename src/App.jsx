@@ -67,7 +67,7 @@ export default function App() {
                 <>
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
                   <span className="font-semibold text-gray-900">{userProfile.name}</span>
-                  <span className="text-[10px] text-gray-400">(카카오 인증)</span>
+                  <span className="text-[10px] text-gray-400">(모의 계정)</span>
                 </>
               ) : (
                 <>

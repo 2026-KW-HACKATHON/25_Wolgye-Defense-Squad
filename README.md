@@ -1,103 +1,41 @@
-# 광운대 로컬 미식 AI 에이전트 (Local Gourmet Agent)
+# 광운대 로컬 미식 에이전트 — 통합 검토본
 
-> **광운대학교 캠퍼스 골목 상권 활성화 & 능동형 식당 추천 에이전트**  
-> 대학생의 공강 시간, 예산, 인원, 메뉴 취향을 종합 분석하여 광운로 인근 숨은 로컬 소상공인 맛집을 추천하고 카카오톡 공유 승인까지 지원합니다.
+팀원 React/Express 앱과 우리 브리핑·협업 문서를 합친 integration/demo-v2 브랜치입니다. main 병합 전 팀 검토가 필요합니다. 원본 브랜치와 팀원 커밋 이력은 보존했습니다.
 
----
+## 실행
 
-## 🌟 주요 특징 (v2 기획 반영)
+Node.js 22 환경에서 `npm ci`를 실행합니다.
+.env.example을 .env로 복사한 후 KAKAO_REST_API_KEY와 NVIDIA_API_KEY를 설정하세요. 키는 서버에서만 사용하고 커밋하지 않습니다.
+카카오 키가 없으면 실제 검색을 사용할 수 없습니다. NVIDIA 호출 실패 시 기본 소개 문구를 사용합니다.
 
-1. **유저플로우 v2 (인증 및 진입)**
-   - 최초 앱 실행 시 온보딩 화면 제공
-   - 카카오 간편 로그인 및 게스트 즉시 체험 지원
-   - 카카오톡 메시지 전송 및 캘린더 일정 추가 권한 동의 절차 포함
+- `npm run dev`: 웹 http://localhost:5173 / API http://localhost:3001
+- `npm test`: 외부 API 모의 응답을 사용하는 서버 회귀 검증
+- `npm run build` 다음 `npm start`: http://localhost:3001 에서 빌드된 앱 실행
 
-2. **와이어프레임 v2 (AI 대화 홈 화면)**
-   - 대화형 인터페이스: 자연어 대화 흐름 중심의 UI
-   - 3개 맞춤 식당 추천 카드:
-     - 음식 및 식당 사진, `[로컬 맛집]` 태그
-     - 편도 도보 시간 및 1인 평균 가격
-     - 총 소요 시간 (왕복 이동 + 식사) vs 학생 공강 시간 여유 지표
-     - 블로그 핵심 인용구 및 원문 링크
-     - `이 식당 선택할게요` 선택 액션 버튼
-   - **코딩 에이전트식 승인 요청 (Agentic Approval Flow)**:
-     - 식당 선택 시 AI가 카카오톡 공유 승인 메시지 제안
-     - 카카오톡 공유 미리보기 및 문구 수정 오버레이 (`overlay:kakao-share`)
-     - 캘린더 식사 일정 추가 연동
+React 앱이므로 index.html을 파일로 직접 열어 실행하지 않습니다.
 
-3. **NVIDIA NIM LLM 연동**
-   - 모델: `meta/llama-3.2-11b-vision-instruct`
-   - 자연어 질의 제약조건(예산, 인원, 취향, 공강시간) 실시간 파악 및 친절한 대화형 추천 생성
+## 구현 상태와 한계
 
----
+- React 대화·카드 화면, Express API, 카카오 장소·블로그 검색 호출.
+- 조건 분석은 정규식 기반. NVIDIA NIM은 소개·공유 확인 문구 생성에 사용.
+- 가격은 업종별 추정, 이동 시간은 거리 기반 추정, 소상공인 여부는 일부 프랜차이즈 이름을 제외한 휴리스틱입니다.
+- 예산·공강 시간은 점수에 반영할 뿐 초과 후보를 반드시 제외하지 않습니다.
+- 카카오 로그인·권한 화면은 시뮬레이션입니다. 실제 OAuth가 아닙니다.
+- 공유는 기기 공유창 또는 문구 복사. 일정은 Google Calendar 작성 화면 열기.
+- 카카오 전용 공유 SDK, 공동 투표, RAG, 실제 메뉴 가격·도보 경로 검증은 미구현입니다.
 
-## 🔒 보안 및 API Key 분리
+## 구성
 
-- 사용자의 NVIDIA NIM API Key는 클라이언트에 절대 노출되지 않도록 **루트 `.env` 파일에만 보관**하며, 백엔드 프록시 서버(`server`)에서만 안전하게 호출합니다.
-- `.gitignore`에 `.env`, `.env.local` 등이 지정되어 있어 **Git 커밋 시 절대 유출되지 않습니다.**
+- src/: React 앱과 화면 컴포넌트
+- server/: API와 카카오·NVIDIA 연동
+- briefing.html + styles.css: 파일로 직접 열 수 있는 팀 브리핑
+- team-briefing.html: 디자인을 포함한 단일 파일 공유본
+- AGENTS.md: 프로젝트 안내
+- .github/pull_request_template.md: 팀 검토 양식
+- docs/integration-review.md: 통합 수정·검증·남은 작업
+- ARCHITECTURE.md, LIMITATIONS.md: 팀원 원본 설명. 코드와 다른 주장·미검증 목표가 있어 통합 문서를 우선 참고하세요.
 
----
+## 협업
 
-## 🚀 빠른 시작 (Quick Start)
-
-### 1. 환경 변수 설정
-`.env.example`을 복사하여 `.env` 파일을 생성하고 NVIDIA API Key를 입력합니다:
-```bash
-cp .env.example .env
-```
-`.env` 내용 예시:
-```env
-PORT=3001
-NVIDIA_API_KEY=your_nvidia_nim_api_key_here
-NVIDIA_MODEL=meta/llama-3.2-11b-vision-instruct
-VITE_API_URL=http://localhost:3001
-```
-
-### 2. 의존성 설치
-```bash
-npm install
-```
-
-### 3. 개발 서버 실행 (프론트엔드 + 백엔드 동시 실행)
-```bash
-npm run dev
-```
-- 프론트엔드: `http://localhost:5173`
-- 백엔드 API: `http://localhost:3001`
-
-### 4. 프로덕션 빌드 및 실행
-```bash
-npm run build
-npm start
-```
-`http://localhost:3001`에 접속하면 빌드된 프론트엔드와 백엔드가 함께 서빙됩니다.
-
----
-
-## 📁 프로젝트 구조
-
-```
-kwhack2/
-├── .env.example               # 환경변수 템플릿 (Git 포함)
-├── .env                       # 실제 비공개 API Key 설정 (Git 제외!)
-├── .gitignore                 # Git 보안 무시 설정
-├── package.json               # 프로젝트 의존성 및 스크립트
-├── index.html                 # 앱 진입 HTML
-├── vite.config.js             # Vite 설정 및 API 프록시
-├── tailwind.config.js         # Tailwind CSS 스타일 설정
-├── server/
-│   ├── index.js               # Express 백엔드 API 서버
-│   ├── data/
-│   │   └── restaurants.json   # 광운대 인근 로컬/소상공인 식당 DB
-│   └── services/
-│       └── nimService.js      # NVIDIA NIM API 연동 및 추천 알고리즘
-└── src/
-    ├── main.jsx               # React 마운트 지점
-    ├── App.jsx                # 메인 레이아웃 및 세션 관리
-    ├── index.css              # Pretendard 폰트 및 Tailwind
-    └── components/
-        ├── OnboardingModal.jsx    # 유저플로우 v2 온보딩/권한 동의
-        ├── ChatContainer.jsx      # 와이어프레임 v2 AI 대화 홈
-        ├── RestaurantCard.jsx     # 와이어프레임 v2 식당 추천 카드
-        └── KakaoShareOverlay.jsx  # 와이어프레임 v2 공유 승인 모달
-```
+통합 브랜치에서 검토 → PR로 main 병합 → 최신 main에서 기능별 브랜치 생성.
+기존 브랜치는 팀 검토가 끝날 때까지 보존합니다.

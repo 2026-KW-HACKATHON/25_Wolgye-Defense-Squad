@@ -311,7 +311,7 @@ export default function ChatContainer({ userProfile, onOpenAuth }) {
             </button>
           </form>
           <div className="mt-1.5 text-center text-[10px] text-gray-400">
-            NVIDIA NIM (Llama 3.2 11B) 및 광운로 소상공인 골목상권 가중치 추천 모델이 적용되어 있습니다.
+            가격·이동 시간·지역 가게 분류는 추정입니다. 실제 메뉴와 영업 여부를 확인해주세요.
           </div>
         </div>
       </div>

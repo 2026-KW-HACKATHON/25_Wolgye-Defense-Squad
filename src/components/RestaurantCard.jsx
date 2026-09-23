@@ -29,12 +29,12 @@ export default function RestaurantCard({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         
-        {/* 상단 뱃지: 로컬 소상공인 맛집 */}
+        {/* 상단 뱃지: 로컬 분류 미확인 맛집 */}
         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
           {restaurant.isLocal && (
             <span className="inline-flex items-center gap-1 rounded-full bg-orange-600/90 backdrop-blur-sm px-2.5 py-0.5 text-[11px] font-semibold text-white shadow-sm">
               <Award className="h-3 w-3" />
-              로컬 맛집
+              지역 가게 후보
             </span>
           )}
           <span className="rounded-full bg-black/60 backdrop-blur-sm px-2 py-0.5 text-[11px] font-medium text-white">
@@ -46,10 +46,10 @@ export default function RestaurantCard({
         <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between text-xs text-white">
           <div className="flex items-center gap-1 font-medium">
             <Compass className="h-3.5 w-3.5 text-orange-400" />
-            <span>도보 {restaurant.walkingTimeMin}분 (편도)</span>
+            <span>도보 추정 {restaurant.walkingTimeMin}분 (편도)</span>
           </div>
           <span className="font-bold text-orange-200">
-            평균 {restaurant.avgPrice.toLocaleString()}원
+            업종 추정 {restaurant.avgPrice.toLocaleString()}원
           </span>
         </div>
       </div>
@@ -63,7 +63,7 @@ export default function RestaurantCard({
           </h4>
           {restaurant.isLocal && (
             <span className="shrink-0 rounded border border-orange-200 bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700">
-              소상공인
+              분류 미확인
             </span>
           )}
         </div>
@@ -84,7 +84,7 @@ export default function RestaurantCard({
                   : 'bg-rose-50 text-rose-700 border border-rose-200'
               }`}
             >
-              {isTimeSafe ? `공강 ${breakTime}분 여유` : `공강 시간 촉박`}
+              {isTimeSafe ? `공강 ${breakTime}분 내 추정` : `공강 시간 촉박`}
             </span>
           )}
         </div>
