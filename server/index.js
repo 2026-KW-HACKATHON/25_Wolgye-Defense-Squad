@@ -59,11 +59,15 @@ app.post('/api/share/prepare', async (req, res) => {
   }
 });
 
-// Get restaurant catalog
-app.get('/api/restaurants', (req, res) => {
-  const restaurantsPath = path.join(__dirname, 'data/restaurants.json');
-  const data = JSON.parse(fs.readFileSync(restaurantsPath, 'utf8'));
-  res.json(data);
+// Get restaurant catalog via Kakao API
+app.get('/api/restaurants', async (req, res) => {
+  try {
+    const { searchKakaoRestaurants } = await import('./services/kakaoService.js');
+    const result = await searchKakaoRestaurants(req.query.q || '맛집');
+    res.json(result.items);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Serve static frontend files in production
