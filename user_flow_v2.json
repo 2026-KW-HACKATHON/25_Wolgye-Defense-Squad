@@ -1,0 +1,203 @@
+{
+  "data": {
+    "id": "f85f1c5f-881b-4f9d-9417-00c63374338f",
+    "groupId": "7cafd8a9-eec9-465b-961f-3fa67480359d",
+    "documentId": "7348f316-b9f3-4c56-b63a-9dc940cb7b4c",
+    "versionNumber": 2,
+    "name": "새 플로우 1 v2",
+    "status": "COMPLETED",
+    "prompt": null,
+    "referencedFeatureIds": [],
+    "aiModel": "gpt-5.6-terra",
+    "createdBy": "e1bc2a81-8e3b-4469-a80f-2508ba81b880",
+    "createdAt": "2026-09-23T05:11:25.860Z",
+    "pageCount": 4,
+    "hasWireframe": false,
+    "flowData": {
+      "nodes": [
+        {
+          "id": "n1",
+          "type": "start",
+          "label": "앱 최초 실행",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n2",
+          "type": "page",
+          "label": "온보딩/시작 화면",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n3",
+          "type": "branch",
+          "label": "로그인 여부?",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n4",
+          "type": "page",
+          "label": "카카오 로그인 화면",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n5",
+          "type": "action",
+          "label": "카카오 계정으로 로그인",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n6",
+          "type": "branch",
+          "label": "권한 동의 완료?",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n7",
+          "type": "page",
+          "label": "권한 동의 화면",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n8",
+          "type": "action",
+          "label": "권한 동의 완료",
+          "sectionId": "s1"
+        },
+        {
+          "id": "n9",
+          "type": "page",
+          "label": "AI 대화 홈 화면",
+          "sectionId": "s2"
+        },
+        {
+          "id": "n10",
+          "type": "action",
+          "label": "채팅 입력",
+          "sectionId": "s2"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "n1",
+          "target": "n2",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "e2",
+          "source": "n2",
+          "target": "n3",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "e3",
+          "source": "n3",
+          "target": "n9",
+          "order": 0,
+          "condition_type": "positive",
+          "label": null
+        },
+        {
+          "id": "e4",
+          "source": "n3",
+          "target": "n4",
+          "order": 1,
+          "condition_type": "negative",
+          "label": null
+        },
+        {
+          "id": "e5",
+          "source": "n4",
+          "target": "n5",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "e6",
+          "source": "n5",
+          "target": "n6",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "e7",
+          "source": "n6",
+          "target": "n9",
+          "order": 0,
+          "condition_type": "positive",
+          "label": null
+        },
+        {
+          "id": "e8",
+          "source": "n6",
+          "target": "n7",
+          "order": 1,
+          "condition_type": "negative",
+          "label": null
+        },
+        {
+          "id": "e9",
+          "source": "n7",
+          "target": "n8",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "e10",
+          "source": "n8",
+          "target": "n9",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "e11",
+          "source": "n9",
+          "target": "n10",
+          "order": 0,
+          "condition_type": null,
+          "label": null
+        },
+        {
+          "id": "f93edac6-41e4-455e-889e-949515227f04",
+          "source": "n10",
+          "target": "n9",
+          "order": 0
+        }
+      ],
+      "sections": [
+        {
+          "id": "s1",
+          "name": "인증 및 진입",
+          "nodeIds": [
+            "n1",
+            "n2",
+            "n3",
+            "n4",
+            "n5",
+            "n6",
+            "n7",
+            "n8"
+          ]
+        },
+        {
+          "id": "s2",
+          "name": "AI 대화",
+          "nodeIds": [
+            "n9",
+            "n10"
+          ]
+        }
+      ]
+    },
+    "tokenUsage": null,
+    "updatedAt": "2026-09-23T06:17:39.388Z"
+  }
+}

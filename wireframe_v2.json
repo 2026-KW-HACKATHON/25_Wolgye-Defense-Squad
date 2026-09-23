@@ -1,0 +1,72 @@
+{
+  "data": {
+    "id": "228b7759-5465-41f0-87d1-04bd8622d0f7",
+    "deviceType": "desktop",
+    "versionNumber": 2,
+    "name": "새 플로우 1 v2",
+    "status": "COMPLETED",
+    "pageLimit": 1,
+    "createdAt": "2026-09-23T06:19:57.573Z",
+    "pages": [
+      {
+        "id": "ccbf5c85-712d-4d85-9cc2-8ec17c38771f",
+        "pageNodeId": "n9",
+        "pageName": "AI 대화 홈 화면",
+        "orderIndex": 0,
+        "status": "COMPLETED",
+        "versionId": "228b7759-5465-41f0-87d1-04bd8622d0f7",
+        "dslText": "page \"AI 대화 홈 화면\" device=web layout=app\n  body\n    col gap=0\n      col gap=16\n        box outlined\n          col gap=8\n            row align=center gap=8\n              image \"AI\" round size=32\n              text \"로컬 미식 AI\" sm\n            text \"안녕하세요! 광운대 인근 맛집을 찾아드릴게요 🍽️\" md\n            text \"오늘 어떤 식사를 원하시나요? 예산, 메뉴, 분위기 등 편하게 말씀해 주세요.\" sm\n\n        box outlined\n          col gap=8\n            row align=center gap=8\n              image \"사용자\" round size=32\n              text \"나\" sm\n            text \"혼자 먹기 좋은 곳이요, 예산은 만 원 이내로요\" md\n\n        box outlined\n          col gap=8\n            row align=center gap=8\n              image \"AI\" round size=32\n              text \"로컬 미식 AI\" sm\n            text \"딱 맞는 곳 3곳을 찾았어요! 혼밥하기 편하고 만 원 이내 식당들이에요 🥢\" md\n\n            box\n              col gap=12\n                box outlined\n                  col gap=8\n                    image \"식당 사진\" height=120\n                    row align=center justify=between\n                      text \"김밥나라 광운대점\" md\n                      box outlined\n                        text \"로컬 맛집\" sm\n                    row gap=8\n                      text \"분식·한식\" sm\n                      text \"도보 3분\" sm\n                      text \"평균 6,000원\" sm\n                    text \"\\\"혼밥하기 딱 좋고 양도 푸짐해서 자주 와요\\\"\" sm\n                    row gap=8\n                      button \"이 식당 선택할게요\" primary\n                      button \"블로그 원문 보기\" secondary\n\n                box outlined\n                  col gap=8\n                    image \"식당 사진\" height=120\n                    row align=center justify=between\n                      text \"우동 한 그릇\" md\n                      box outlined\n                        text \"로컬 맛집\" sm\n                    row gap=8\n                      text \"일식·면류\" sm\n                      text \"도보 5분\" sm\n                      text \"평균 8,500원\" sm\n                    text \"\\\"깔끔하고 조용해서 혼밥러들이 많이 찾아요\\\"\" sm\n                    row gap=8\n                      button \"이 식당 선택할게요\" primary\n                      button \"블로그 원문 보기\" secondary\n\n                box outlined\n                  col gap=8\n                    image \"식당 사진\" height=120\n                    row align=center justify=between\n                      text \"편의 도시락 특선\" md\n                    row gap=8\n                      text \"한식·도시락\" sm\n                      text \"도보 2분\" sm\n                      text \"평균 5,500원\" sm\n                    text \"\\\"메뉴 다양하고 가성비 최고예요\\\"\" sm\n                    row gap=8\n                      button \"이 식당 선택할게요\" primary\n                      button \"블로그 원문 보기\" secondary\n\n        box outlined\n          col gap=8\n            row align=center gap=8\n              image \"AI\" round size=32\n              text \"로컬 미식 AI\" sm\n            text \"우동 한 그릇을 선택하셨군요! 카카오톡으로 친구에게 공유할까요? 😊\" md\n            box outlined\n              col gap=8\n                text \"카카오톡 공유 미리보기\" sm\n                text \"🍜 오늘 점심 추천: 우동 한 그릇 (광운대 인근)\" md\n                text \"혼밥하기 좋고 깔끔한 일식 면요리 전문점이에요. 도보 5분 거리, 평균 8,500원.\" sm\n                text \"📍 서울 노원구 광운로 일대\" sm\n                row gap=8 justify=end\n                  button \"취소\" secondary -> \"close\"\n                  button \"카카오톡으로 공유 승인\" primary -> \"overlay:kakao-share\"\n\n      row\n        input \"광운대 인근 식당 추천해줘... 예: '매운 거 먹고 싶어', '친구랑 파스타'\" type=area\n\n  overlay id=kakao-share\n    text \"카카오톡 공유\" md\n    text \"아래 내용을 카카오톡으로 전송합니다.\" sm\n    box outlined\n      col gap=4\n        text \"🍜 오늘 점심 추천: 우동 한 그릇\" md\n        text \"📍 도보 5분 · 평균 8,500원\" sm\n        text \"혼밥하기 좋고 깔끔한 일식 면요리 전문점이에요.\" sm\n    row justify=end gap=8\n      button \"취소\" secondary -> \"close\"\n      button \"공유하기\" primary -> \"close\"",
+        "createdAt": "2026-09-23T06:20:24.243Z"
+      }
+    ],
+    "pageContextMap": {
+      "n2": {
+        "actions": [],
+        "sectionName": "인증 및 진입",
+        "incomingPageIds": [],
+        "connectedPageIds": [
+          "n4",
+          "n9"
+        ]
+      },
+      "n4": {
+        "actions": [
+          "카카오 계정으로 로그인"
+        ],
+        "sectionName": "인증 및 진입",
+        "incomingPageIds": [
+          "n2"
+        ],
+        "connectedPageIds": [
+          "n7",
+          "n9"
+        ]
+      },
+      "n7": {
+        "actions": [
+          "권한 동의 완료"
+        ],
+        "sectionName": "인증 및 진입",
+        "incomingPageIds": [
+          "n4"
+        ],
+        "connectedPageIds": [
+          "n9"
+        ]
+      },
+      "n9": {
+        "actions": [
+          "채팅 입력"
+        ],
+        "sectionName": "AI 대화",
+        "incomingPageIds": [
+          "n2",
+          "n4",
+          "n7"
+        ],
+        "connectedPageIds": []
+      }
+    },
+    "sharedNavigation": "header\n  text \"로컬 미식\" md\n  spacer \"1\"\n  image \"프로필\" round size=32"
+  }
+}

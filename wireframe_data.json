@@ -1,0 +1,61 @@
+{
+  "data": [
+    {
+      "id": "c4145ea4-fb08-4cfb-9d25-ea4e56694c81",
+      "deviceType": "desktop",
+      "versionNumber": 1,
+      "name": "새 플로우 1",
+      "status": "COMPLETED",
+      "pageLimit": 4,
+      "createdAt": "2026-09-22T14:29:00.092Z",
+      "pages": [
+        {
+          "id": "a3ed07d7-2cce-498d-9b0c-22c710451345",
+          "pageNodeId": "n15",
+          "pageName": "식당 추천 결과 화면",
+          "orderIndex": 0,
+          "status": "COMPLETED"
+        },
+        {
+          "id": "5a5b5dae-b5a2-4148-8715-eb46e5185003",
+          "pageNodeId": "n20",
+          "pageName": "식당 상세 화면",
+          "orderIndex": 1,
+          "status": "COMPLETED"
+        },
+        {
+          "id": "ce57d127-8fd2-4fee-993d-4c96a1cfc48c",
+          "pageNodeId": "n28",
+          "pageName": "공유 문구 미리보기 화면",
+          "orderIndex": 2,
+          "status": "COMPLETED"
+        },
+        {
+          "id": "e2b3623d-43a6-4194-9a6f-e22f51e8884e",
+          "pageNodeId": "n33",
+          "pageName": "공유 완료 안내 화면",
+          "orderIndex": 3,
+          "status": "COMPLETED"
+        }
+      ]
+    },
+    {
+      "id": "228b7759-5465-41f0-87d1-04bd8622d0f7",
+      "deviceType": "desktop",
+      "versionNumber": 2,
+      "name": "새 플로우 1 v2",
+      "status": "COMPLETED",
+      "pageLimit": 1,
+      "createdAt": "2026-09-23T06:19:57.573Z",
+      "pages": [
+        {
+          "id": "ccbf5c85-712d-4d85-9cc2-8ec17c38771f",
+          "pageNodeId": "n9",
+          "pageName": "AI 대화 홈 화면",
+          "orderIndex": 0,
+          "status": "COMPLETED"
+        }
+      ]
+    }
+  ]
+}
