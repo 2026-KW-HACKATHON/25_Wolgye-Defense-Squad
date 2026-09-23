@@ -1,13 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { searchKakaoRestaurants } from './kakaoService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load restaurants data
+// Fallback catalog
 const restaurantsPath = path.join(__dirname, '../data/restaurants.json');
-const restaurants = JSON.parse(fs.readFileSync(restaurantsPath, 'utf8'));
+const fallbackRestaurants = JSON.parse(fs.readFileSync(restaurantsPath, 'utf8'));
 
 const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
@@ -50,7 +51,7 @@ async function callNIM(messages, options = {}) {
  * Extract requirements from user message and select 3 best restaurants
  */
 export async function processChatRecommendation(userMessage, conversationHistory = []) {
-  // Fallback defaults
+  // Extract keywords, budget, people, breakTime
   let extracted = {
     budget: null,
     people: 1,
@@ -58,7 +59,6 @@ export async function processChatRecommendation(userMessage, conversationHistory
     keywords: []
   };
 
-  // Rule-based regex extraction as baseline
   const budgetMatch = userMessage.match(/(\d+)\s*(만\s*원|천\s*원|원)/);
   if (budgetMatch) {
     let num = parseInt(budgetMatch[1], 10);
@@ -87,11 +87,16 @@ export async function processChatRecommendation(userMessage, conversationHistory
   if (userMessage.includes('국수') || userMessage.includes('면') || userMessage.includes('우동')) extracted.keywords.push('일식', '따뜻한국물');
   if (userMessage.includes('가성비') || userMessage.includes('싸고')) extracted.keywords.push('가성비');
 
+  // Search candidate pool via Kakao Maps API (or local curated fallback)
+  const searchQuery = extracted.keywords.length > 0 ? extracted.keywords.join(' ') : '맛집';
+  const kakaoResult = await searchKakaoRestaurants(searchQuery);
+  const candidatePool = kakaoResult.items.length > 0 ? kakaoResult.items : fallbackRestaurants;
+
   // Score candidate restaurants
-  const scored = restaurants.map(r => {
+  const scored = candidatePool.map(r => {
     let score = 0;
     
-    // Priority for local small business
+    // Priority for local small business (골목 상권)
     if (r.isLocal) score += 15;
 
     // Budget check
@@ -101,8 +106,9 @@ export async function processChatRecommendation(userMessage, conversationHistory
     }
 
     // Break time feasibility
-    const roundTrip = r.walkingTimeMin * 2;
-    const totalTime = roundTrip + r.diningTimeMin;
+    const roundTrip = (r.walkingTimeMin || 4) * 2;
+    const diningTime = r.diningTimeMin || 25;
+    const totalTime = roundTrip + diningTime;
     if (extracted.breakTime) {
       if (totalTime <= extracted.breakTime) score += 15;
       else score -= 25;
@@ -110,17 +116,37 @@ export async function processChatRecommendation(userMessage, conversationHistory
 
     // Keyword matching
     for (const kw of extracted.keywords) {
-      if (r.tags.some(t => t.includes(kw)) || r.category.includes(kw) || r.name.includes(kw)) {
+      if ((r.tags && r.tags.some(t => t.includes(kw))) || r.category.includes(kw) || r.name.includes(kw)) {
         score += 10;
       }
     }
 
-    // Default diversity small noise
     return { ...r, score, totalTime, roundTrip };
   });
 
   scored.sort((a, b) => b.score - a.score);
-  const selectedRestaurants = scored.slice(0, 3);
+  
+  // Deduplicate and pick top 3
+  const uniqueSelected = [];
+  const seenNames = new Set();
+  for (const item of scored) {
+    if (!seenNames.has(item.name)) {
+      seenNames.add(item.name);
+      uniqueSelected.push(item);
+    }
+    if (uniqueSelected.length >= 3) break;
+  }
+
+  // If still less than 3, fill from fallback
+  if (uniqueSelected.length < 3) {
+    for (const fb of fallbackRestaurants) {
+      if (!seenNames.has(fb.name)) {
+        seenNames.add(fb.name);
+        uniqueSelected.push(fb);
+      }
+      if (uniqueSelected.length >= 3) break;
+    }
+  }
 
   // Generate conversational response with LLM
   let aiMessage = '';
@@ -128,9 +154,9 @@ export async function processChatRecommendation(userMessage, conversationHistory
     const prompt = `당신은 광운대학교 인근 로컬 미식 추천 AI 에이전트입니다.
 사용자 요청: "${userMessage}"
 추천할 식당 3곳:
-1. ${selectedRestaurants[0].name} (${selectedRestaurants[0].category}, 도보 ${selectedRestaurants[0].walkingTimeMin}분, 평균 ${selectedRestaurants[0].avgPrice.toLocaleString()}원)
-2. ${selectedRestaurants[1].name} (${selectedRestaurants[1].category}, 도보 ${selectedRestaurants[1].walkingTimeMin}분, 평균 ${selectedRestaurants[1].avgPrice.toLocaleString()}원)
-3. ${selectedRestaurants[2].name} (${selectedRestaurants[2].category}, 도보 ${selectedRestaurants[2].walkingTimeMin}분, 평균 ${selectedRestaurants[2].avgPrice.toLocaleString()}원)
+1. ${uniqueSelected[0].name} (${uniqueSelected[0].category}, 도보 ${uniqueSelected[0].walkingTimeMin}분, 평균 ${uniqueSelected[0].avgPrice.toLocaleString()}원)
+2. ${uniqueSelected[1].name} (${uniqueSelected[1].category}, 도보 ${uniqueSelected[1].walkingTimeMin}분, 평균 ${uniqueSelected[1].avgPrice.toLocaleString()}원)
+3. ${uniqueSelected[2].name} (${uniqueSelected[2].category}, 도보 ${uniqueSelected[2].walkingTimeMin}분, 평균 ${uniqueSelected[2].avgPrice.toLocaleString()}원)
 
 다음 규칙에 맞추어 사용자에게 대화 답변을 작성하세요:
 - 1~2문장으로 친절하고 경쾌하게 인사 및 조건에 맞춘 요약을 제공하세요.
@@ -150,8 +176,9 @@ export async function processChatRecommendation(userMessage, conversationHistory
 
   return {
     aiMessage: aiMessage.trim(),
-    restaurants: selectedRestaurants,
-    extracted
+    restaurants: uniqueSelected,
+    extracted,
+    dataSource: kakaoResult.source // 'kakao_api' or 'local_fallback'
   };
 }
 
@@ -159,10 +186,24 @@ export async function processChatRecommendation(userMessage, conversationHistory
  * Handle restaurant selection and prepare KakaoTalk share preview
  */
 export async function prepareShareApproval(restaurantId, userMessage = '') {
-  const target = restaurants.find(r => r.id === restaurantId) || restaurants[0];
+  const allCandidates = fallbackRestaurants;
+  const target = allCandidates.find(r => r.id === restaurantId) || {
+    id: restaurantId,
+    name: '선택한 광운대 식당',
+    category: '로컬 맛집',
+    tags: ['광운대', '맛집'],
+    walkingTimeMin: 5,
+    diningTimeMin: 25,
+    avgPrice: 8000,
+    address: '서울 노원구 광운로 일대',
+    imageUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=600&auto=format&fit=crop&q=80',
+    blogQuote: '광운대 학생들이 자주 찾는 가성비 로컬 맛집',
+    blogSource: '카카오맵 & 블로그',
+    blogUrl: 'https://map.kakao.com'
+  };
 
   const shareTitle = `🍜 오늘 점심 추천: ${target.name} (광운대 인근)`;
-  const shareDescription = `${target.tags.join('·')} 맞춤 식당이에요. 도보 ${target.walkingTimeMin}분 거리, 1인 평균 ${target.avgPrice.toLocaleString()}원.`;
+  const shareDescription = `${target.tags ? target.tags.join('·') : '로컬 맛집'} 식당이에요. 도보 ${target.walkingTimeMin}분 거리, 1인 평균 ${target.avgPrice.toLocaleString()}원.`;
   const shareAddress = target.address;
 
   let aiIntro = `${target.name}을(를) 선택하셨군요! 카카오톡으로 친구에게 공유할까요? 😊`;

@@ -22,7 +22,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     model: process.env.NVIDIA_MODEL || 'meta/llama-3.2-11b-vision-instruct',
-    hasKey: !!process.env.NVIDIA_API_KEY
+    hasKey: !!process.env.NVIDIA_API_KEY,
+    hasKakaoKey: !!(process.env.KAKAO_REST_API_KEY && process.env.KAKAO_REST_API_KEY !== 'your_kakao_rest_api_key_here')
   });
 });
 
