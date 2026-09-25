@@ -1,6 +1,13 @@
-# 광운대 로컬 미식 에이전트 — 통합 검토본
+# 월계밥상 — 지역 식사 추천과 사용자 기여 플랫폼
 
-팀원 React/Express 앱과 우리 브리핑·협업 문서를 합친 integration/demo-v2 브랜치입니다. main 병합 전 팀 검토가 필요합니다. 원본 브랜치와 팀원 커밋 이력은 보존했습니다.
+기존 integration/demo-v2의 React/Express 구현과 이력을 main에 반영했습니다. 새 방향은 그룹별 조건 추천·투표와 사용자 기여형 메뉴·가격 정보를 연결하는 서비스입니다. 서비스명은 가칭입니다.
+
+## 최신 기획과 중간발표 자료
+
+- [서비스 기획과 API 검토안](docs/product-plan.html): 파일을 내려받아 브라우저에서 엽니다.
+- 중간발표 데모와 보고서는 [feat/midterm-community-demo 브랜치](https://github.com/2026-KW-HACKATHON/25_Wolgye-Defense-Squad/tree/feat/midterm-community-demo)에 있습니다.
+- 해당 브랜치의 `public/midterm-demo.html`은 단독 실행 가능하며 API 키가 필요 없습니다.
+- LLM은 NVIDIA NIM 사용 예정입니다. DB·추가 API·모델 선택은 검토안이며 확정 후 실제 연동합니다.
 
 ## 실행
 
@@ -37,5 +44,5 @@ React 앱이므로 index.html을 파일로 직접 열어 실행하지 않습니�
 
 ## 협업
 
-통합 브랜치에서 검토 → PR로 main 병합 → 최신 main에서 기능별 브랜치 생성.
-기존 브랜치는 팀 검토가 끝날 때까지 보존합니다.
+main은 기존 구현과 최신 기획을 보관합니다. integration/demo-v2는 원본 통합본으로 보존하고, 새 개발은 기능 브랜치에서 진행합니다.
+사용자 요청으로 이전 chore/demo-foundation·feat/local-gourmet-agent-v2 브랜치는 정리합니다. 삭제 전 이력은 로컬 `.tools/branches-before-cleanup.bundle`에 보관했습니다.
