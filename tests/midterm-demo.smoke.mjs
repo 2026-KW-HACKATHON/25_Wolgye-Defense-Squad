@@ -1,0 +1,97 @@
+// Optional browser QA: npm install --prefix .tools/qa @playwright/test
+// node tests/midterm-demo.smoke.mjs (uses installed Chrome, no personal profile)
+import { chromium } from '../.tools/qa/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+import { mkdir, access } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const output = resolve('.tools/qa-results');
+await mkdir(output, { recursive: true });
+const candidates = [process.env.BROWSER_EXECUTABLE, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'].filter(Boolean);
+let executablePath;
+for (const candidate of candidates) { try { await access(candidate); executablePath = candidate; break; } catch {} }
+const browser = await chromium.launch({ executablePath, headless: true });
+const errors = [];
+try {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, offline: true });
+  const page = await context.newPage();
+  page.on('pageerror', e => errors.push(e.message));
+  const url = pathToFileURL(resolve('public/midterm-demo.html')).href;
+  const action = name => page.locator(`[data-action="${name}"]`);
+  const shot = async name => {
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name}: horizontal overflow`);
+    await page.screenshot({ path: resolve(output, `${name}.png`), fullPage: true });
+  };
+  await page.goto(url);
+  await shot('01-home');
+  await page.locator('#create-form button').click();
+  await action('invite').click();
+  assert.match(await page.locator('#share-link').inputValue(), /#room=WG\d{4}$/);
+  await shot('02-invite');
+  await action('close-modal').click();
+  await action('sample-members').click();
+  await page.locator('#condition-form button[type=submit]').click();
+  await shot('03-conditions');
+  await action('recommend').click();
+  assert.equal(await page.locator('.restaurant').count(), 3);
+  await shot('04-candidates');
+  await page.locator('[data-action=vote][data-id=r1]').click();
+  await action('submit-vote').click();
+  await action('submit-vote').click(); // Duplicate submits must not count twice.
+  await action('sample-votes').click();
+  await action('finish-vote').click();
+  assert.match(await page.locator('h1').innerText(), /골목반점/);
+  await shot('05-result');
+  await action('visit').click();
+  await action('sample-photo').click();
+  await action('ocr').click();
+  assert.equal(await page.locator('[name=price]').inputValue(), '12000');
+  await page.locator('[name=verified]').check();
+  await shot('06-contribution');
+  await page.locator('#edit-form button[type=submit]').click();
+  assert.match(await page.locator('.feed').innerText(), /7,000원 → 짜장면 12,000원/);
+  await shot('07-profile');
+  await page.locator('#nav-meal').click();
+  await action('re-recommend').click();
+  assert.equal(await page.locator('.restaurant').count(), 2);
+  assert.equal(await page.locator('.restaurant').filter({ hasText: '골목반점' }).count(), 0);
+  await page.reload();
+  assert.equal(await page.locator('.restaurant').count(), 2);
+  await action('back-conditions').click();
+  await page.locator('[data-example=empty]').click();
+  await page.locator('#condition-form button[type=submit]').click();
+  await action('recommend').click();
+  assert.match(await page.locator('#screen').innerText(), /조건에 맞는 식당이 없어요/);
+  await shot('08-empty');
+  await page.locator('#nav-wiki').click();
+  await action('new-place').click();
+  await page.locator('[name=name]').fill('새로운 골목가게');
+  await page.locator('[name=address]').fill('광운로 1길 시연 위치');
+  await page.locator('[name=evidence]').setInputFiles({ name: 'sign.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64') });
+  await page.locator('#new-place-form button').click();
+  assert.match(await page.locator('#screen').innerText(), /등록 확인 중/);
+  await shot('09-wiki');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await shot('10-mobile-wiki');
+  await action('reset').click();
+  await action('confirm-reset').click();
+  await shot('11-mobile-home');
+  await page.locator('#create-form button').click();
+  await page.locator('#condition-form button[type=submit]').click();
+  await action('recommend').click();
+  await shot('12-mobile-candidates');
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  for (const [file, name] of [['docs/product-plan.html','13-product-plan'],['docs/midterm-report.html','14-report']]) {
+    await page.goto(pathToFileURL(resolve(file)).href);
+    await shot(name);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await shot(`${name}-mobile`);
+    await page.setViewportSize({ width: 1280, height: 1000 });
+  }
+  await page.locator('[data-copy=problem]').click();
+  assert.match(await page.locator('#status').innerText(), /복사|선택/);
+  assert.deepEqual(errors, [], 'Browser script errors');
+  console.log('PASS: group, invite, constraints, voting, duplicate vote, result, menu update, re-recommendation, reload, no match, pending place, mobile layouts, document copy.');
+  console.log(`Screenshots: ${output}`);
+} finally { await browser.close(); }
