@@ -33,3 +33,6 @@ wireframe_v1.json
 Thumbs.db
 .vscode/
 .idea/
+
+# Presentation deliverables stay local
+docs/presentation/
