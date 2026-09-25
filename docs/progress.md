@@ -23,3 +23,12 @@
 - npm run build 통과. 샌드박스에서 Vite 상위 폴더 읽기가 제한되어 동일 빌드를 승인된 실행 환경에서 수행.
 - .tools/branches-before-cleanup.bundle에 삭제 전 브랜치 이력 보관. main 미포함 foundation 커밋도 복구 가능.
 - 실서비스 API, 공동 접속, OAuth, 사진 OCR·업로드는 이번 작업 범위에서 미연동.
+
+## 원격 반영 완료
+
+- main: 790014d (통합 구현 + 기획 + 최신 작업 안내).
+- feat/midterm-community-demo: 데모·보고서 구현과 main 안내 병합 완료, 원격 반영.
+- integration/demo-v2: 5766f8d 그대로 보존.
+- origin/chore/demo-foundation, origin/feat/local-gourmet-agent-v2 삭제 완료. 예상 커밋을 확인하는 lease와 atomic push로 동시 변경 방지.
+- 최종 빌드 성공, public/midterm-demo.html과 dist/midterm-demo.html의 SHA-256 일치 확인.
+- 노션에 단계별 진행 및 결과물 GitHub 링크 기록.
