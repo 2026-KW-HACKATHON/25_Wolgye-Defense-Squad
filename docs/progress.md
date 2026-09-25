@@ -32,3 +32,11 @@
 - origin/chore/demo-foundation, origin/feat/local-gourmet-agent-v2 삭제 완료. 예상 커밋을 확인하는 lease와 atomic push로 동시 변경 방지.
 - 최종 빌드 성공, public/midterm-demo.html과 dist/midterm-demo.html의 SHA-256 일치 확인.
 - 노션에 단계별 진행 및 결과물 GitHub 링크 기록.
+
+## 중간발표 자료 제작 (2026-09-25)
+
+- docs/presentation/wolgye-midterm-v2.pptx: 수정 가능한 8장 발표자료. 문제, 그룹 조건, 추천·투표, 가격 수정 시연, 사용자 기여, 구현 범위, 본선 계획 구성. 발표자 노트 포함.
+- docs/presentation/wolgye-midterm.pdf: 같은 내용의 제출용 PDF.
+- docs/midterm-report.html: 제공된 양식의 7개 항목을 A4 1장 분량으로 축약. 주최 측 원본 양식에 복사하고 팀원 이름·역할을 입력해야 함.
+- PPTX 패키지·도형 경계·폰트·네이티브 표 검사 및 재가져오기 통과. 네이티브 이미지 렌더러 오류로 PPTX 내용을 브라우저에서 렌더링해 PDF 생성. PowerPoint 자체 렌더링은 미검증.
+- 발표자료 전체 화면 및 보고서 인쇄 화면 시각 검토. 보고서 PDF 1장 확인. 기존 앱 코드는 변경하지 않음.
