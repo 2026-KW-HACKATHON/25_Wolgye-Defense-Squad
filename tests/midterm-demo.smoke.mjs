@@ -19,6 +19,11 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   const url = pathToFileURL(resolve('public/midterm-demo.html')).href;
   const action = name => page.locator(`[data-action="${name}"]`);
+  const savePhrase = async phrase => {
+    await page.locator('[name=phrase]').fill(phrase);
+    await page.locator('#condition-form button[type=submit]').click();
+    await page.locator('#condition-form button[type=submit]').click();
+  };
   const shot = async name => {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${name}: horizontal overflow`);
     await page.screenshot({ path: resolve(output, `${name}.png`), fullPage: true });
@@ -31,7 +36,7 @@ try {
   await shot('02-invite');
   await action('close-modal').click();
   await action('sample-members').click();
-  await page.locator('#condition-form button[type=submit]').click();
+  await savePhrase('만원 이하로 짜장면 먹고 싶고 50분 안에 돌아와야 해요.');
   await shot('03-conditions');
   await action('recommend').click();
   assert.equal(await page.locator('.restaurant').count(), 3);
@@ -59,8 +64,7 @@ try {
   await page.reload();
   assert.equal(await page.locator('.restaurant').count(), 2);
   await action('back-conditions').click();
-  await page.locator('[data-example=empty]').click();
-  await page.locator('#condition-form button[type=submit]').click();
+  await savePhrase('5천원 이하로 먹고 20분 안에 돌아와야 해요.');
   await action('recommend').click();
   assert.match(await page.locator('#screen').innerText(), /조건에 맞는 식당이 없어요/);
   await shot('08-empty');
@@ -78,9 +82,31 @@ try {
   await action('confirm-reset').click();
   await shot('11-mobile-home');
   await page.locator('#create-form button').click();
-  await page.locator('#condition-form button[type=submit]').click();
+  await savePhrase('아무거나 괜찮아');
   await action('recommend').click();
   await shot('12-mobile-candidates');
+  await action('back-conditions').click();
+  await savePhrase('한식 먹고 싶어');
+  await action('recommend').click();
+  assert.equal(await page.locator('.restaurant').filter({hasText:'담백한식탁'}).count(),1,'No invented budget cap');
+  await action('back-conditions').click();
+  await savePhrase('돈은 상관없고 매운 건 못 먹어');
+  await action('recommend').click();
+  assert.equal(await page.locator('.restaurant').filter({hasText:'월계한상'}).count(),0,'Spicy exclusion');
+  await action('back-conditions').click();
+  await page.locator('[name=phrase]').fill('조용하고 빨리 먹을 수 있는 곳');
+  assert.equal(await action('recommend').isDisabled(),true,'Editing invalidates saved conditions');
+  await page.locator('#condition-form button[type=submit]').click();
+  assert.match(await page.locator('#condition-preview').innerText(),/미반영/);
+  await page.locator('#condition-form button[type=submit]').click();
+  assert.equal(await action('recommend').isDisabled(),true,'Unapplied conditions require acknowledgement');
+  await page.locator('[name=acknowledge]').check();
+  await page.locator('#condition-form button[type=submit]').click();
+  await shot('15-mobile-natural-conditions');
+  await page.reload();
+  assert.equal(await page.locator('[name=phrase]').inputValue(),'조용하고 빨리 먹을 수 있는 곳');
+  await action('recommend').click();
+  assert.match(await page.locator('#screen').innerText(),/미반영 조건이 있습니다/);
   await page.setViewportSize({ width: 1280, height: 1000 });
   for (const [file, name] of [['docs/product-plan.html','13-product-plan'],['docs/midterm-report.html','14-report']]) {
     await page.goto(pathToFileURL(resolve(file)).href);
