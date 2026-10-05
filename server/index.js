@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { processChatRecommendation, prepareShareApproval } from './services/nimService.js';
 import fs from 'fs';
+import {communityRoutes} from './communityRoutes.js';
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api/community', communityRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -80,6 +82,6 @@ if (fs.existsSync(distPath)) {
   });
 }
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`Local Gourmet Agent server running on http://localhost:${server.address().port}`);
 });

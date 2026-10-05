@@ -1,0 +1,23 @@
+import {chromium} from '../.tools/qa/node_modules/playwright/index.mjs';
+import assert from 'node:assert/strict';
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+const page=await browser.newPage({viewport:{width:1200,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.route('https://tile.openstreetmap.org/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#abc"/></svg>'}));
+const catalog=[{id:'kakao-test',name:'테스트 실제정보 형식',kind:'한식',address:'서울 노원구 광운로',lat:37.6193,lng:127.0583,phone:null,placeUrl:'https://place.map.kakao.com/1',retrievedAt:'2026-10-05T00:00:00Z'}];
+await page.route('**/api/community/places',r=>r.fulfill({json:{items:catalog}}));
+await page.route('**/api/community/recommend',r=>r.fulfill({json:{answer:'입력 조건을 이해했어요. 가격·분위기는 확인이 필요합니다.',items:catalog,notice:'추가 확인용 후보'}}));
+await page.goto('http://127.0.0.1:5173');
+const nav=name=>page.locator('.desktop-nav nav').getByRole('button',{name,exact:true});
+await nav('찾기').click();await page.locator('.place-card').first().waitFor({timeout:30000});
+console.log('fixture cards',await page.locator('.place-card').count());
+assert.equal(await page.getByText('골목식탁',{exact:true}).count(),0);
+await page.getByLabel('원하는 장소 조건').fill('만원 이하로 조용히 대화하고 싶어. 50분 안에 돌아와야 해.');
+await page.getByRole('button',{name:'장소 찾아보기'}).click();await page.locator('.ai-answer').waitFor({timeout:65000});
+console.log('answer',await page.locator('.ai-answer').innerText());assert.ok(await page.locator('.place-card').count()<=3);
+if(await page.locator('.place-card').count()){await page.getByRole('button',{name:'가게 자세히'}).first().click();await page.getByRole('link',{name:'카카오맵에서 확인'}).waitFor();await page.getByRole('button',{name:'닫기',exact:true}).click();}
+await nav('탐방').click();await page.locator('.leaflet-overlay-pane path').nth(1).waitFor();
+await nav('소식').click();await page.getByRole('button',{name:'소식 올리기',exact:true}).first().click();await page.getByLabel('제목',{exact:true}).fill('연결 확인');await page.getByLabel('내용',{exact:true}).fill('테스트용 로컬 기록');await page.getByRole('button',{name:'등록 내용 확인'}).click();await page.getByRole('button',{name:'확인하고 소식 저장'}).click();
+await page.setViewportSize({width:390,height:844});await page.locator('.bottom-nav').getByRole('button',{name:'찾기',exact:true}).click();
+assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+await page.screenshot({path:'.tools/qa-results/live-find-mobile.png',fullPage:true});
+console.log('PASS: API fixture catalog, answer rendering, details, map markers, local post, mobile, no JS errors');await browser.close();
