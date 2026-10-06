@@ -15,7 +15,7 @@ function inRing([x,y], ring) {
 }
 export const inWolgye1 = (lat,lng) => polygons.some(rings => inRing([lng,lat],rings[0]) && !rings.slice(1).some(r=>inRing([lng,lat],r)));
 const districtBounds = L.geoJSON(boundary).getBounds();
-export default function LocationMap({places=[],onPlace}) {
+export default function LocationMap({places=[],onPlace,onPick,selected}) {
   const container = useRef(null), map = useRef(null), locationLayer = useRef(null), request = useRef(0);
   const [busy, setBusy] = useState(false), [status, setStatus] = useState('월계1동 지도입니다. 내 위치는 월계1동 안에 있을 때만 표시돼요.');
   useEffect(() => {
@@ -60,6 +60,12 @@ export default function LocationMap({places=[],onPlace}) {
     }
     return()=>layer.remove();
   },[places,onPlace]);
+  useEffect(()=>{
+    if(!map.current||!onPick)return;
+    const click=e=>{if(inWolgye1(e.latlng.lat,e.latlng.lng)){onPick({lat:e.latlng.lat,lng:e.latlng.lng});setStatus('선택한 위치에 새 가게를 등록합니다.');}else setStatus('월계1동 경계 안을 선택해 주세요.');};
+    map.current.on('click',click);return()=>map.current?.off('click',click);
+  },[onPick]);
+  useEffect(()=>{if(!map.current||!selected)return;const marker=L.circleMarker([selected.lat,selected.lng],{radius:12,color:'#193e33',weight:3,fillColor:'#d5f06c',fillOpacity:1}).addTo(map.current);return()=>marker.remove();},[selected]);
   function locate() {
     if (!window.isSecureContext || !navigator.geolocation) {
       setStatus('현재 위치는 HTTPS 주소 또는 localhost의 지원 브라우저에서 사용할 수 있어요.'); return;
@@ -90,6 +96,6 @@ export default function LocationMap({places=[],onPlace}) {
     <div className="location-map-toolbar"><b>월계1동 골목 지도</b><div><button type="button" className="button outline" onClick={()=>map.current?.fitBounds(districtBounds)}>동네 전체</button><button type="button" className="button dark" onClick={locate} disabled={busy}><MapPin size={18}/>{busy?'확인 중…':'내 위치'}</button></div></div>
     <div ref={container} className="live-location-map" aria-label="현재 위치를 확인할 수 있는 실제 지도"/>
     <p role="status" className="location-status">{status}</p>
-    <small className="location-note">초록 점은 카카오에서 조회한 월계1동 가게입니다. 위치는 버튼을 누를 때 한 번 확인하며 이동 경로는 저장하지 않아요. 지도 제공자에게 표시 영역의 지도 요청이 전송됩니다.</small>
+    <small className="location-note">초록 점은 등록된 월계1동 가게입니다. 위치는 버튼을 누를 때 한 번 확인하며 이동 경로는 저장하지 않아요. 지도 제공자에게 표시 영역의 지도 요청이 전송됩니다.</small>
   </section>;
 }

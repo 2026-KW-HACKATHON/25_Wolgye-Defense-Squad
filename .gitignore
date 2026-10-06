@@ -4,6 +4,7 @@
 .env.*
 !.env.example
 .tools/
+.local-data/
 .env.*.local
 
 # Dependencies
