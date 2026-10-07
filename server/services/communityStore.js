@@ -1,3 +1,5 @@
+import {getPool,useDatabase} from '../db/pool.js';
+import {createPostgresCommunityStore} from '../db/postgresStores.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
@@ -22,4 +24,4 @@ export function createCommunityStore(file=path.resolve('.local-data/community.js
     removePost:(id,token)=>{const i=data.posts.findIndex(p=>p.id===id&&p.ownerHash===owner(token));if(i<0)return false;data.posts.splice(i,1);persist();return true;}
   };
 }
-export const communityStore=createCommunityStore();
+export const communityStore=useDatabase()?createPostgresCommunityStore(getPool()):createCommunityStore();

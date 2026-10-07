@@ -14,7 +14,7 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
     }
     next();
   });
-  router.get('/posts',(req,res)=>res.json({items:store.posts(req.contributor)}));
+  router.get('/posts',async(req,res)=>{try{res.json({items:await store.posts(req.contributor)});}catch{res.status(503).json({error:'공용 저장소에서 소식을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'});}});
   router.post('/places',async(req,res)=>{
     try{
       const {lat,lng}=req.body||{};
@@ -22,11 +22,11 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
       if(!p.name||!p.kind||!p.address||!inDistrict(lat,lng))return res.status(400).json({error:'가게 이름·업종·주소를 입력하고 월계1동 안의 위치를 선택해 주세요.'});
       const existing=(await catalog()).items;
       const normalize=s=>s.replace(/\s/g,'').toLowerCase();
-      const duplicate=[...existing,...store.places()].find(x=>normalize(x.name)===normalize(p.name)&&Math.hypot((x.lat-lat)*111000,(x.lng-lng)*88000)<150);
+      const duplicate=[...existing,...await store.places()].find(x=>normalize(x.name)===normalize(p.name)&&Math.hypot((x.lat-lat)*111000,(x.lng-lng)*88000)<150);
       if(duplicate)return res.status(409).json({error:'가까운 위치에 같은 이름의 가게가 있어요. 기존 가게를 선택해 주세요.',duplicate});
-      if(store.places().length>=2000)return res.status(409).json({error:'등록 가능한 가게 수를 초과했어요.'});
-      res.status(201).json({place:store.addPlace(p,req.contributor)});
-    }catch{res.status(502).json({error:'기존 가게 확인 또는 저장에 실패했어요. 다시 시도해 주세요.'});}
+      if((await store.places()).length>=2000)return res.status(409).json({error:'등록 가능한 가게 수를 초과했어요.'});
+      res.status(201).json({place:await store.addPlace(p,req.contributor)});
+    }catch(e){res.status(e.status||502).json({error:e.status?e.message:'기존 가게 확인 또는 저장에 실패했어요. 다시 시도해 주세요.'});}
   });
   async function save(req,res){
     try{
@@ -42,13 +42,13 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
         if(!valid||bytes.length>1048576)return res.status(400).json({error:'1MB 이하의 올바른 사진을 선택해 주세요.'});
       }
       if(!(await catalog()).items.some(x=>x.id===p.placeId))return res.status(400).json({error:'등록된 가게를 선택해 주세요.'});
-      if(!req.params.id&&store.posts().length>=1000)return res.status(409).json({error:'소식 저장 공간이 가득 찼어요.'});
-      const post=store.savePost(p,req.contributor,req.params.id);
+      if(!req.params.id&&(await store.posts()).length>=1000)return res.status(409).json({error:'소식 저장 공간이 가득 찼어요.'});
+      const post=await store.savePost(p,req.contributor,req.params.id);
       if(!post)return res.status(403).json({error:'이 브라우저에서 작성한 소식만 수정할 수 있어요.'});
       res.json({post});
     }catch{res.status(502).json({error:'소식을 저장하지 못했어요. 다시 시도해 주세요.'});}
   }
   router.post('/posts',save);router.put('/posts/:id',save);
-  router.delete('/posts/:id',(req,res)=>{if(!store.removePost(req.params.id,req.contributor))return res.status(403).json({error:'이 브라우저에서 작성한 소식만 삭제할 수 있어요.'});res.json({ok:true});});
+  router.delete('/posts/:id',async(req,res)=>{try{if(!await store.removePost(req.params.id,req.contributor))return res.status(403).json({error:'이 브라우저에서 작성한 소식만 삭제할 수 있어요.'});res.json({ok:true});}catch{res.status(503).json({error:'공용 저장소에 연결할 수 없어 삭제하지 못했어요.'});}});
   return router;
 }

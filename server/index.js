@@ -1,3 +1,4 @@
+import {checkDatabase} from './db/pool.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -86,6 +87,7 @@ if (fs.existsSync(distPath)) {
   });
 }
 
+try{await checkDatabase();}catch{console.error('공용 DB 연결 또는 테이블 확인 실패. 서버를 시작하지 않습니다. DB 설정과 npm run db:setup을 확인하세요.');process.exit(1);}
 const server = app.listen(PORT, process.env.HOST || '127.0.0.1', () => {
   console.log(`Local Gourmet Agent server running on http://localhost:${server.address().port}`);
 });

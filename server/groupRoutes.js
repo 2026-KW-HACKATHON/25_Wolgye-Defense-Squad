@@ -1,60 +1,54 @@
 import express from 'express';
-import fs from 'node:fs';
-import path from 'node:path';
-import {randomBytes} from 'node:crypto';
+import {randomBytes,randomUUID} from 'node:crypto';
 import {recommendCommunity} from './services/communityService.js';
+import {createFileGroupStore,defaultGroupStore} from './services/groupStore.js';
 
-export function createGroupRouter({file=path.resolve('.local-data/groups.json'),recommend=recommendCommunity}={}) {
-  const router=express.Router();
-  const groups=fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):{};
-  const working=new Set();
-  const persist=()=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',JSON.stringify(groups));fs.renameSync(file+'.tmp',file);};
-  const view=g=>({...g,members:g.members.map(({token,...m})=>m)});
+export function createGroupRouter({file,store,recommend=recommendCommunity}={}) {
+  store=store||(file?createFileGroupStore(file):defaultGroupStore());
+  const router=express.Router(),working=new Set();
+  const view=({recommendLease,...g})=>({...g,members:g.members.map(({token,...m})=>m)});
   const member=name=>({id:randomBytes(8).toString('hex'),token:randomBytes(24).toString('hex'),name,condition:''});
   const valid=(s,max)=>typeof s==='string'&&s.trim().length>0&&s.trim().length<=max;
-  router.post('/',(req,res)=>{
-    if(!valid(req.body.name,40)||!valid(req.body.nickname,30))return res.status(400).json({error:'모임 이름과 닉네임을 입력해 주세요.'});
-    if(Object.keys(groups).length>=1000)return res.status(429).json({error:'모임 저장 한도에 도달했어요.'});
-    let id;do{id=randomBytes(6).toString('hex').toUpperCase();}while(groups[id]);
-    const m=member(req.body.nickname.trim());
-    const g={id,name:req.body.name.trim(),ownerId:m.id,members:[m],revision:0,candidates:null,votes:{},answer:'',notice:''};
-    groups[id]=g;persist();res.status(201).json({group:view(g),token:m.token,memberId:m.id});
-  });
-  router.post('/:id/join',(req,res)=>{
-    const g=groups[req.params.id.toUpperCase()];if(!g)return res.status(404).json({error:'초대 코드를 찾을 수 없어요.'});
-    if(!valid(req.body.nickname,30))return res.status(400).json({error:'닉네임을 입력해 주세요.'});
-    if(g.members.length>=12)return res.status(409).json({error:'모임은 최대 12명까지 참여할 수 있어요.'});
-    const m=member(req.body.nickname.trim());g.members.push(m);g.revision++;g.candidates=null;g.votes={};g.answer='';persist();res.json({group:view(g),token:m.token,memberId:m.id});
-  });
-  router.use('/:id',(req,res,next)=>{
-    const g=groups[req.params.id.toUpperCase()];if(!g)return res.status(404).json({error:'모임을 찾을 수 없어요.'});
-    const token=req.get('Authorization')?.replace(/^Bearer /,'');const m=g.members.find(x=>x.token===token);
-    if(!m)return res.status(403).json({error:'초대 코드로 먼저 참여해 주세요.'});
-    req.group=g;req.member=m;next();
-  });
-  router.get('/:id',(req,res)=>res.json({group:view(req.group)}));
-  router.put('/:id/condition',(req,res)=>{
-    if(!valid(req.body.condition,240))return res.status(400).json({error:'조건은 1~240자로 입력해 주세요.'});
-    const g=req.group;req.member.condition=req.body.condition.trim();g.revision++;g.candidates=null;g.answer='';g.votes={};persist();res.json({group:view(g)});
-  });
-  router.post('/:id/recommend',async(req,res)=>{
-    const g=req.group;
-    if(req.member.id!==g.ownerId)return res.status(403).json({error:'모임장이 후보를 만들 수 있어요.'});
-    if(!g.members.every(m=>m.condition))return res.status(409).json({error:'모든 참가자가 조건을 저장해야 해요.'});
-    if(working.size>=2||working.has(g.id))return res.status(429).json({error:'후보를 찾고 있어요. 잠시 후 다시 시도해 주세요.'});
-    if(g.lastRequest&&Date.now()-g.lastRequest<15000)return res.status(429).json({error:'15초 후 다시 시도해 주세요.'});
-    g.lastRequest=Date.now();const revision=g.revision;working.add(g.id);
-    try {
-      const result=await recommend(g.members.map((m,i)=>`참가자 ${i+1}: ${m.condition}`).join('\n'));
-      if(g.revision!==revision)return res.status(409).json({error:'참가자나 조건이 바뀌었어요. 다시 추천해 주세요.'});
-      g.candidates=result.items;g.answer=result.answer;g.notice=result.notice;g.votes={};g.revision++;persist();res.json({group:view(g)});
-    }catch(e){res.status(502).json({error:e.name==='TimeoutError'?'추천 시간이 초과됐어요. 다시 시도해 주세요.':e.message});}finally{working.delete(g.id);}
-  });
-  router.put('/:id/vote',(req,res)=>{
-    const g=req.group,ids=req.body.ids;
-    if(req.body.revision!==g.revision)return res.status(409).json({error:'후보가 바뀌었어요. 새로 확인해 주세요.'});
-    if(!Array.isArray(ids)||!g.candidates||ids.some(id=>!g.candidates.some(p=>p.id===id)))return res.status(400).json({error:'현재 후보 중에서 선택해 주세요.'});
-    g.votes[req.member.id]=[...new Set(ids)];persist();res.json({group:view(g)});
-  });
+  const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
+  const clear=g=>{g.revision++;g.candidates=null;g.votes={};g.answer='';g.notice='';g.recommendLease=null;};
+  const authorize=(g,req)=>{if(!g)fail(404,'모임을 찾을 수 없어요.');const token=req.get('Authorization')?.replace(/^Bearer /,'');const m=g.members.find(x=>x.token===token);if(!m)fail(403,'초대 코드로 먼저 참여해 주세요.');return m;};
+  const run=fn=>async(req,res)=>{try{await fn(req,res);}catch(e){res.status(e.status||503).json({error:e.status?e.message:'모임 저장소 또는 추천에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.'});}};
+  router.post('/',run(async(req,res)=>{
+    if(!valid(req.body.name,40)||!valid(req.body.nickname,30))fail(400,'모임 이름과 닉네임을 입력해 주세요.');
+    let id;do{id=randomBytes(6).toString('hex').toUpperCase();}while(await store.get(id));
+    const m=member(req.body.nickname.trim()),g={id,name:req.body.name.trim(),ownerId:m.id,members:[m],revision:0,candidates:null,votes:{},answer:'',notice:''};
+    await store.create(g);res.status(201).json({group:view(g),token:m.token,memberId:m.id});
+  }));
+  router.param('id',(req,res,next,id)=>{req.params.id=id.toUpperCase();next();});
+  router.post('/:id/join',run(async(req,res)=>{
+    if(!valid(req.body.nickname,30))fail(400,'닉네임을 입력해 주세요.');
+    const result=await store.mutate(req.params.id,g=>{if(g.members.length>=12)fail(409,'모임은 최대 12명까지 참여할 수 있어요.');const m=member(req.body.nickname.trim());g.members.push(m);clear(g);return {group:view(g),token:m.token,memberId:m.id};});res.json(result);
+  }));
+  router.get('/:id',run(async(req,res)=>{const g=await store.get(req.params.id);authorize(g,req);res.json({group:view(g)});}));
+  router.put('/:id/condition',run(async(req,res)=>{
+    if(!valid(req.body.condition,240))fail(400,'조건은 1~240자로 입력해 주세요.');
+    const g=await store.mutate(req.params.id,g=>{authorize(g,req).condition=req.body.condition.trim();clear(g);return view(g);});res.json({group:g});
+  }));
+  router.post('/:id/recommend',run(async(req,res)=>{
+    if(working.size>=2||working.has(req.params.id))fail(429,'후보를 찾고 있어요. 잠시 후 다시 시도해 주세요.');
+    const lease=randomUUID();working.add(req.params.id);
+    try{
+      const snapshot=await store.mutate(req.params.id,g=>{
+        const m=authorize(g,req);if(m.id!==g.ownerId)fail(403,'모임장이 후보를 만들 수 있어요.');
+        if(!g.members.every(m=>m.condition))fail(409,'모든 참가자가 조건을 저장해야 해요.');
+        if(g.recommendLease&&Date.now()-g.lastRequest<65000)fail(429,'후보를 찾고 있어요. 잠시 후 다시 시도해 주세요.');
+        if(g.lastRequest&&Date.now()-g.lastRequest<15000)fail(429,'15초 후 다시 시도해 주세요.');
+        g.lastRequest=Date.now();g.recommendLease=lease;return structuredClone(g);
+      });
+      const result=await recommend(snapshot.members.map((m,i)=>`참가자 ${i+1}: ${m.condition}`).join('\n'));
+      const group=await store.mutate(req.params.id,g=>{if(g.revision!==snapshot.revision||g.recommendLease!==lease)fail(409,'참가자나 조건이 바뀌었어요. 다시 추천해 주세요.');g.candidates=result.items;g.answer=result.answer;g.notice=result.notice;g.votes={};g.revision++;g.recommendLease=null;return view(g);});res.json({group});
+    }finally{
+      working.delete(req.params.id);
+      try{await store.mutate(req.params.id,g=>{if(g.recommendLease===lease)g.recommendLease=null;});}catch{}
+    }
+  }));
+  router.put('/:id/vote',run(async(req,res)=>{
+    const group=await store.mutate(req.params.id,g=>{const m=authorize(g,req),ids=req.body.ids;if(req.body.revision!==g.revision)fail(409,'후보가 바뀌었어요. 새로 확인해 주세요.');if(!Array.isArray(ids)||!g.candidates||ids.some(id=>!g.candidates.some(p=>p.id===id)))fail(400,'현재 후보 중에서 선택해 주세요.');g.votes[m.id]=[...new Set(ids)];return view(g);});res.json({group});
+  }));
   return router;
 }
