@@ -11,7 +11,7 @@ const validTime=new Set(['아침','점심','저녁','야식']);
 export function createOwnerMarketingStore(file=path.resolve('.local-data/owner-marketing.json')){
   let data={campaigns:[],proposals:[],views:[],sessions:[],accounts:[]};
   if(fs.existsSync(file))data={...data,...JSON.parse(fs.readFileSync(file,'utf8'))};
-  const persist=()=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(`${file}.tmp`,JSON.stringify(data));fs.renameSync(`${file}.tmp`,file);};
+  const persist=()=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(`${file}.tmp`,JSON.stringify(data));for(let attempt=0;;attempt++){try{fs.renameSync(`${file}.tmp`,file);break;}catch(e){if(!['EPERM','EBUSY','EACCES'].includes(e.code)||attempt>=4)throw e;Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,25*(attempt+1));}}};
   const session=token=>data.sessions.find(s=>s.expires>Date.now()&&s.hash===digest(token||''));
   const passwordHash=(password,salt)=>scryptSync(password,salt,64).toString('hex');
   const issueSession=placeId=>{const token=randomBytes(32).toString('hex');data.sessions=data.sessions.filter(s=>s.expires>Date.now());data.sessions.push({hash:digest(token),placeId,expires:Date.now()+7*86400000});persist();return token;};
