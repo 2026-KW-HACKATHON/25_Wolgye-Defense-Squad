@@ -43,6 +43,14 @@ CREATE TABLE IF NOT EXISTS wolgye.owner_keywords (
   id text PRIMARY KEY,
   data jsonb NOT NULL CHECK (jsonb_typeof(data) = 'object')
 );
+CREATE TABLE IF NOT EXISTS wolgye.owner_coupons (
+  id text PRIMARY KEY,
+  data jsonb NOT NULL CHECK (jsonb_typeof(data) = 'object')
+);
+CREATE TABLE IF NOT EXISTS wolgye.user_rewards (
+  id text PRIMARY KEY,
+  data jsonb NOT NULL CHECK (jsonb_typeof(data) = 'object')
+);
 CREATE TABLE IF NOT EXISTS wolgye.user_data (
   id text PRIMARY KEY,
   data jsonb NOT NULL CHECK (jsonb_typeof(data) = 'object')
@@ -54,6 +62,8 @@ ALTER TABLE wolgye.owner_proposals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wolgye.owner_views ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wolgye.user_data ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wolgye.owner_keywords ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wolgye.owner_coupons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wolgye.user_rewards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wolgye.place_info ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wolgye.posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wolgye.groups ENABLE ROW LEVEL SECURITY;

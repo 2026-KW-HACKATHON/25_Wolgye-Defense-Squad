@@ -51,6 +51,11 @@ export function parseCondition(text){
   for(const m of raw.matchAll(/([가-힣a-zA-Z]+)\s*(?:거|것|음식|종류|류)?\s*(?:은|는|을|를|이|가|도)?\s*(?:빼고|말고|제외|싫어|싫|못\s*먹|안\s*먹|별로|알레르기|알러지)/g)){
     const w=josa(m[1]);if(w&&!STOP.has(w))excludes.push(w);rest=rest.replace(m[0],' ');
   }
+  // "맵지 않게", "안 매운", "덜 짜게" 같은 맛 표현도 제외 조건으로 읽는다.
+  const TASTE={맵:'매운',매:'매운',짜:'짠',달:'단',느끼하:'느끼한',시:'신'};
+  for(const m of raw.matchAll(/(맵|짜|달|느끼하|시)지\s*않(?:게|은|는|았|고)?|(?:안|덜)\s*(맵|매|짜|달|느끼하|시)(?:운|게|은|고)?/g)){
+    const w=TASTE[m[1]||m[2]];if(w&&!excludes.includes(w))excludes.push(w);rest=rest.replace(m[0],' ');
+  }
   rest=rest.replace(/(\d+(?:\.\d+)?)?\s*만\s*(\S*천)?\s*원?|\d[\d,]*\s*(원|천원|시|분)/g,' ');
   const wants=[...new Set((rest.match(/[가-힣a-zA-Z]+/g)||[]).map(josa).filter(w=>w.length>=1&&!STOP.has(w)&&!excludes.includes(w)).filter(w=>known(w)||(w.length>=2&&!/(요|자|어|아|에|게|고|서|지|니|다|면|데|죠|네)$/.test(w))))];
   return {raw,wants,excludes:[...new Set(excludes)],budget:budgets.length?Math.min(...budgets):null,hour};

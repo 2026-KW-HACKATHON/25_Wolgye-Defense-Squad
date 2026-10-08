@@ -5,6 +5,7 @@
 import 'dotenv/config';
 import {createHash} from 'node:crypto';
 import {communityStore} from '../server/services/communityStore.js';
+import {ownerMarketingStore} from '../server/services/ownerMarketingStore.js';
 import {useDatabase,getPool} from '../server/db/pool.js';
 
 const AUTHOR='시연용 예시';
@@ -31,6 +32,8 @@ const POSTS=[
   {placeId:'kakao-1682165592',type:'새로운 발견',title:'조용히 작업하기 좋은 카페',body:'창가 쪽에 콘센트 자리가 있어서 과제하기 좋았어요.',keywords:['카공','조용함'],observedAt:day(3)}
 ];
 
+// 단골 쿠폰 예시 (골목냥 레벨에 따라 열림)
+const COUPONS=[{placeId:'kakao-1682165592',title:'아메리카노 사이즈업',minLevel:2},{placeId:'kakao-24997619',title:'만두 2개 서비스',minLevel:3}];
 const remove=process.argv.includes('--remove');
 try{
   if(remove){
@@ -45,7 +48,8 @@ try{
       else await communityStore.savePlaceInfo(id,Object.fromEntries(Object.keys(info.fields||{}).map(k=>[k,''])),{role:'neighbor',author:AUTHOR,observedAt:day(0),editorHash:TOKEN});
       infos++;
     }
-    console.log(`시연용 예시 삭제: 소식 ${posts}개, 가게 정보 ${infos}곳`);
+    let coupons=0;for(const c of await ownerMarketingStore.allCoupons())if(c.demo&&await ownerMarketingStore.removeCoupon(c.placeId,c.id))coupons++;
+    console.log(`시연용 예시 삭제: 소식 ${posts}개, 가게 정보 ${infos}곳, 쿠폰 ${coupons}개`);
   }else{
     let infos=0,posts=0;
     for(const [id,fields] of Object.entries(INFO))if(await communityStore.savePlaceInfo(id,fields,{role:'neighbor',author:AUTHOR,observedAt:day(1),editorHash:TOKEN}))infos++;
@@ -54,6 +58,8 @@ try{
       if(existing.some(x=>x.mine&&x.title===p.title))continue;
       await communityStore.savePost({...p,body:`[시연용 예시] ${p.body}`,author:AUTHOR,image:'',authorRole:'neighbor'},TOKEN);posts++;
     }
-    console.log(`시연용 예시 추가: 가게 정보 ${infos}곳, 소식 ${posts}개 (지우기: node scripts/demo-seed.mjs --remove)`);
+    let coupons=0;const have=await ownerMarketingStore.allCoupons();
+    for(const c of COUPONS)if(!have.some(x=>x.demo&&x.placeId===c.placeId&&x.title===c.title)){await ownerMarketingStore.saveCoupon(c.placeId,{...c,demo:true});coupons++;}
+    console.log(`시연용 예시 추가: 가게 정보 ${infos}곳, 소식 ${posts}개, 쿠폰 ${coupons}개 (지우기: node scripts/demo-seed.mjs --remove)`);
   }
 }finally{if(useDatabase())await getPool().end();}

@@ -27,7 +27,7 @@ export function PlaceInfoForm({place,isOwner,onSaved}){
  const [observedAt,setObservedAt]=useState(today()),[error,setError]=useState(''),[saving,setSaving]=useState(false);
  async function submit(e){
   e.preventDefault();setSaving(true);setError('');
-  try{await communityApi(`/places/${encodeURIComponent(place.id)}/info`,'PUT',{fields:values,observedAt});await onSaved();}
+  try{const d=await communityApi(`/places/${encodeURIComponent(place.id)}/info`,'PUT',{fields:values,observedAt});await onSaved(d?.earned||0);}
   catch(err){setError(err.message);}finally{setSaving(false);}
  }
  return <form onSubmit={submit}>

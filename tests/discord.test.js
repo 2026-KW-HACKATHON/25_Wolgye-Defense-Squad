@@ -26,12 +26,12 @@ test('Discord and web share groups, isolate users, restore membership, invalidat
     await assert.rejects(()=>bot.recommend('guild','bob',code),/모임장/);
     g=await bot.recommend('guild','alice',code);const revision=g.revision;
     await bot.vote('guild','alice',code,['a'],revision);g=await bot.vote('guild','bob',code,['a'],revision);assert.equal(Object.values(g.votes).length,2);
-    const card=groupMessage(g,'https://example.com');assert.ok(!JSON.stringify(card).includes('token'));assert.equal(card.components[1].components[0].max_values,1);assert.deepEqual(card.allowedMentions,{parse:[]});const webButton=card.components.flatMap(row=>row.components).find(c=>c.label==='웹에서 열기');assert.ok(webButton);assert.equal(new URL(webButton.url).searchParams.get('group'),code);
+    const card=groupMessage(g,'https://example.com');assert.ok(!JSON.stringify(card).includes('token'));assert.equal(card.components.flatMap(r=>r.components).find(c=>c.type===3).max_values,1);assert.deepEqual(card.allowedMentions,{parse:[]});const webButton=card.components.flatMap(row=>row.components).find(c=>c.label==='웹에서 열기');assert.ok(webButton);assert.equal(new URL(webButton.url).searchParams.get('group'),code);
     const web=await fetch(base+'/api/groups/'+code+'/join',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nickname:'웹 사용자'})});assert.equal(web.status,200);
     g=await bot.get('guild','alice',code);assert.equal(g.members.length,3);assert.equal(g.candidates,null);
     await assert.rejects(()=>bot.vote('guild','bob',code,['a'],revision),/후보가 바뀌/);
     await assert.rejects(()=>bot.get('other-guild','alice',code));
-        assert.equal(conditionModal(code).components[0].components[0].max_length,240);assert.equal(commands[0].options.length,5);
+        assert.equal(conditionModal(code).components[0].component.max_length,240);assert.equal(conditionModal(code).components[1].component.type,23);assert.equal(commands[0].options.length,2);
     assert.throws(()=>createGroupBridge({base:'https://example.com',file}),/로컬 서버/);
   }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 });
@@ -46,8 +46,8 @@ test('Discord card hides tallies until everyone submits, then the owner decides'
     await bot.join('guild','bob',code,'밥');await bot.condition('guild','alice',code,'국수');await bot.condition('guild','bob',code,'분식');
     g=await bot.recommend('guild','alice',code);
     await bot.vote('guild','alice',code,['a'],g.revision);g=await bot.submit('guild','alice',code,g.revision);
-    const hidden=groupMessage(g,'',await bot.me('guild','alice',code));
-    assert.ok(!hidden.embeds[0].fields.some(f=>/표$/.test(f.name)));assert.ok(JSON.stringify(hidden).includes('투표 완료됨'));
+    const hidden=groupMessage(g);
+    assert.ok(!hidden.embeds[0].fields.some(f=>/표$/.test(f.name)));assert.ok(JSON.stringify(hidden).includes('✅ 투표 완료'));assert.ok(!JSON.stringify(hidden).includes('wg:recommend'));
     await bot.vote('guild','bob',code,['a','b'],g.revision);g=await bot.submit('guild','bob',code,g.revision);
     const shown=groupMessage(g);assert.ok(shown.embeds[0].fields.some(f=>f.name.endsWith('2표')));
     assert.ok(JSON.stringify(shown).includes('wg:finalize:'+code+':majority'));

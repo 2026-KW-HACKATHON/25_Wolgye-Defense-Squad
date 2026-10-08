@@ -31,7 +31,7 @@ export function createGroupBridge({base='http://127.0.0.1:3001',file,store,fetch
     // 카드에서 "내가 투표를 완료했는지" 표시하려고 내 참가자 id도 함께 돌려준다.
     async me(guild,user,code){return (await store.get(key(guild,user,code)))?.memberId||null;},
     get:(guild,user,code)=>as(guild,user,code,'','GET'),
-    condition:(guild,user,code,condition)=>as(guild,user,code,'/condition','PUT',{condition}),
+    condition:(guild,user,code,condition,secret=false)=>as(guild,user,code,'/condition','PUT',{condition,private:secret}),
     recommend:(guild,user,code)=>as(guild,user,code,'/recommend','POST',{}),
     vote:(guild,user,code,ids,revision)=>as(guild,user,code,'/vote','PUT',{ids,revision}),
     submit:(guild,user,code,revision)=>as(guild,user,code,'/vote/submit','POST',{revision}),

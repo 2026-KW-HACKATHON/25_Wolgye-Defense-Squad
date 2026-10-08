@@ -13,6 +13,8 @@ import {createGroupRouter} from './groupRoutes.js';
 import {createOwnerMarketingRouter} from './ownerMarketingRoutes.js';
 import {ownerMarketingStore} from './services/ownerMarketingStore.js';
 import {userDataStore} from './services/userDataStore.js';
+import {createRewardRouter,earn} from './rewardRoutes.js';
+import {rewardStore} from './services/rewardStore.js';
 import {aiReady,textModel} from './services/llm.js';
 
 dotenv.config();
@@ -31,8 +33,9 @@ app.get('/api/me/data',authenticate,requireUser,async(req,res)=>{try{res.json(aw
 app.put('/api/me/data',authenticate,requireUser,async(req,res)=>{try{res.json(await userDataStore.set(req.user.id,req.body));}catch{res.status(503).json({error:'내 기록을 저장하지 못했어요.'});}});
 // 장소 목록과 찾기 검색은 로그인 없이 쓸 수 있어야 하므로 로그인 검사보다 먼저 연결한다.
 app.use('/api/community', communityRoutes);
-app.use('/api/community', authenticate, createContributionRouter({requireAccount:true,roleFor:async(req,placeId)=>{if(!req.user)return 'neighbor';const a=await ownerMarketingStore.accountForUser(req.user.id);return a?.status==='approved'&&a.placeId===placeId?'owner':'neighbor';}}));
+app.use('/api/community', authenticate, createContributionRouter({requireAccount:true,onEarn:earn,onRevoke:refKey=>rewardStore.revokeRef(refKey),roleFor:async(req,placeId)=>{if(!req.user)return 'neighbor';const a=await ownerMarketingStore.accountForUser(req.user.id);return a?.status==='approved'&&a.placeId===placeId?'owner':'neighbor';}}));
 app.use('/api/groups', createGroupRouter());
+app.use('/api/rewards', createRewardRouter());
 app.use('/api/owner', createOwnerMarketingRouter());
 
 // Health check

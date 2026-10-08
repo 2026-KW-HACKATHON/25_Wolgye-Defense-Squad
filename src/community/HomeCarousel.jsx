@@ -5,7 +5,9 @@ import {RoleBadge} from './PlaceInfo';
 // 메인 상단에서 옆으로 넘겨보는 배너. 장을 추가하거나 글귀를 바꾸려면 아래 slides만 고치면 된다.
 // 배경 사진: public/community/wolgye/ 에 사진을 넣고 BACKGROUNDS에 파일 이름을 적는다. 남이 찍은 사진이면 credit에 출처를 적는다.
 const BACKGROUNDS={post:{src:'/community/wolgye/kwangwoon-station.jpg',credit:'광운대역 · Cocapepper (CC0)'},owner:null}; // 예: post:{src:'/community/wolgye/alley.jpg',credit:''}
-export default function HomeCarousel({post,place,onOpenPost,onCompose,onOwner}){
+import {GolmokCat} from './CatMessage';
+
+export default function HomeCarousel({post,place,onOpenPost,onCompose,onOwner,onReward}){
  const slides=[
   post?{key:'post',onClick:()=>onOpenPost(post),image:post.image,background:BACKGROUNDS.post,icon:<NotebookPen size={56}/>,
     kicker:`방금 올라온 소식 · ${post.type}`,title:post.title,body:post.body,
@@ -13,7 +15,9 @@ export default function HomeCarousel({post,place,onOpenPost,onCompose,onOwner}){
    :{key:'post',onClick:onCompose,icon:<Plus size={56}/>,background:BACKGROUNDS.post,kicker:'아직 올라온 소식이 없어요',
     title:<>첫 번째 골목 소식을<br/>남겨주세요</>,body:'새 메뉴, 달라진 가격, 오늘의 영업 소식처럼 직접 확인한 이야기를 이웃에게 전해요.'},
   {key:'owner',tone:'dark',onClick:onOwner,background:BACKGROUNDS.owner,icon:<House size={56}/>,kicker:'사장님이신가요?',
-    title:<>우리 가게 소식,<br/>사장님이 직접 알려주세요</>,body:'가게 관리 권한을 받으면 메뉴·영업시간에 ‘사장님’ 표시가 붙고, AI로 홍보 문구와 이미지를 만들 수 있어요.'}
+    title:<>우리 가게 소식,<br/>사장님이 직접 알려주세요</>,body:'가게 관리 권한을 받으면 메뉴·영업시간에 ‘사장님’ 표시가 붙고, AI로 홍보 문구와 이미지를 만들 수 있어요.'},
+  {key:'reward',tone:'cat',onClick:onReward,icon:<GolmokCat mood="happy" size={150}/>,kicker:'골목냥이 배고파요',
+    title:<>정보 보태고 밥 주면<br/>동네 가게 쿠폰이 열려요</>,body:'가게 정보를 보태면 밥알을 받아요. 밥을 주면 골목냥이 자라고, 사장님이 준비한 단골 쿠폰이 열려요.'}
  ];
  const track=useRef(null),[index,setIndex]=useState(0),[paused,setPaused]=useState(false);
  // 마우스 위치에 따라 카드가 살짝 기울고 빛이 반사된다(마우스를 쓰는 기기에서만).

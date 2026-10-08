@@ -60,3 +60,24 @@ test('votes are hidden until everyone submits, then the owner can finalize',asyn
     assert.equal((await api('/'+id+'/finalize','POST',{mode:'roulette'},a.token)).status,409);
   }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('a secret condition is hidden from other members but shown to its owner',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wolgye-secret-'));
+  const app=express();app.use(express.json());
+  app.use('/groups',createGroupRouter({file:path.join(dir,'groups.json'),recommend:async()=>({items:[{id:'p1',name:'가',memberChecks:[{name:'나',checks:[{kind:'budget',label:'예산 10,000원',status:'met',statusLabel:'충족',evidence:'8,000원'}]}]}],understood:[{name:'나',wants:['국수'],excludes:[],budget:10000,hour:null}],answer:'',notice:''})}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+  const base=`http://127.0.0.1:${server.address().port}/groups`;
+  const api=async(url,method='GET',body,token)=>{const r=await fetch(base+url,{method,headers:{'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,...await r.json()};};
+  try{
+    const a=await api('/','POST',{name:'점심',nickname:'가'}),id=a.group.id;const b=await api('/'+id+'/join','POST',{nickname:'나'});
+    await api('/'+id+'/condition','PUT',{condition:'한식'},a.token);
+    await api('/'+id+'/condition','PUT',{condition:'만원 이하 국수',private:true},b.token);
+    let seenByA=(await api('/'+id,'GET',null,a.token)).group;
+    assert.equal(seenByA.members[1].condition,'비밀 조건');assert.equal(seenByA.members[1].private,true);
+    assert.equal((await api('/'+id,'GET',null,b.token)).group.members[1].condition,'만원 이하 국수');
+    seenByA=(await api('/'+id+'/recommend','POST',{},a.token)).group;
+    assert.equal(seenByA.understood[0].private,true);assert.deepEqual(seenByA.understood[0].wants,[]);
+    assert.equal(seenByA.candidates[0].memberChecks[0].checks[0].label,'비밀 조건');
+    assert.ok(!JSON.stringify(seenByA).includes('국수'));
+  }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
+});
