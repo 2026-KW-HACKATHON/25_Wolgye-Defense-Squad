@@ -3,10 +3,11 @@ import {createPostgresCommunityStore} from '../db/postgresStores.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
+import {applyInfoEdit} from './placeInfo.js';
 
 export function createCommunityStore(file=path.resolve('.local-data/community.json')) {
-  let data={places:[],posts:[]};
-  if(fs.existsSync(file))data=JSON.parse(fs.readFileSync(file,'utf8'));
+  let data={places:[],posts:[],placeInfo:{}};
+  if(fs.existsSync(file))data={...data,...JSON.parse(fs.readFileSync(file,'utf8'))};
   const persist=()=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',JSON.stringify(data));fs.renameSync(file+'.tmp',file);};
   const owner=token=>createHash('sha256').update(token).digest('hex');
   const publicRow=({ownerHash,...row},token)=>({...row,...(token?{mine:ownerHash===owner(token)}:{})});
@@ -21,6 +22,8 @@ export function createCommunityStore(file=path.resolve('.local-data/community.js
       if(index<0)data.posts.unshift(row);else data.posts[index]=row;
       persist();return publicRow(row,token);
     },
+    placeInfo:()=>data.placeInfo,
+    savePlaceInfo:(placeId,changes,editor)=>{const row=applyInfoEdit(data.placeInfo[placeId],placeId,changes,editor);if(!row)return null;data.placeInfo[placeId]=row;persist();return row;},
     removePost:(id,token)=>{const i=data.posts.findIndex(p=>p.id===id&&p.ownerHash===owner(token));if(i<0)return false;data.posts.splice(i,1);persist();return true;}
   };
 }

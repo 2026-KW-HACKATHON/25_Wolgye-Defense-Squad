@@ -13,9 +13,11 @@
     "preview": "vite preview",
     "share": "node scripts/share-server.mjs",
     "discord:register": "node scripts/discord-register.mjs",
-    "discord:bot": "node scripts/discord-bot.mjs"
+    "discord:bot": "node scripts/discord-bot.mjs",
+    "db:setup": "node scripts/db-setup.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "cors": "^2.8.5",
     "discord.js": "^14.27.0",
     "dotenv": "^16.4.7",

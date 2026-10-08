@@ -1,5 +1,6 @@
 import {retrieveCommunity} from './communityRetrieval.js';
 import {communityStore} from './communityStore.js';
+import {infoReports,publicInfo} from './placeInfo.js';
 import fs from 'node:fs';
 const boundary = JSON.parse(fs.readFileSync(new URL('../../src/community/wolgye1-boundary.json', import.meta.url), 'utf8'));
 function inRing(x,y,ring) {
@@ -44,8 +45,8 @@ async function getBasePlaces() {
 
 export async function getCommunityPlaces() {
   const data=await getBasePlaces();
-  const posts=await communityStore.posts();
-  return {...data,items:[...await communityStore.places(),...data.items].map(p=>({...p,reports:posts.filter(n=>n.placeId===p.id).sort((a,b)=>b.observedAt.localeCompare(a.observedAt)).map(({id,body,type,observedAt})=>({id,body,type,observedAt}))}))};
+  const posts=await communityStore.posts(),infos=await communityStore.placeInfo();
+  return {...data,items:[...await communityStore.places(),...data.items].map(p=>({...p,info:publicInfo(infos[p.id]),reports:[...infoReports(infos[p.id]),...posts.filter(n=>n.placeId===p.id).map(({id,body,type,observedAt})=>({id,body,type,observedAt}))].sort((a,b)=>b.observedAt.localeCompare(a.observedAt))}))};
 }
 
 export function validateRecommendation(value, places, message='') {

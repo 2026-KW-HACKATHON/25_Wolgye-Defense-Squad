@@ -5,7 +5,7 @@ import {once} from 'node:events';
 
 test('health, validation, restaurant search, chat and share preparation', {timeout:20000}, async () => {
   const server = spawn(process.execPath, ['--import','./tests/mock-provider.js','server/index.js'], {
-    env:{...process.env,PORT:'0',KAKAO_REST_API_KEY:'test-only',NVIDIA_API_KEY:'test-only'},stdio:['ignore','pipe','pipe']
+    env:{...process.env,DATA_STORE:'file',PORT:'0',KAKAO_REST_API_KEY:'test-only',NVIDIA_API_KEY:'test-only'},stdio:['ignore','pipe','pipe']
   });
   try {
     const port = await new Promise((resolve,reject) => {

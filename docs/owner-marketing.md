@@ -5,8 +5,8 @@
 ## 실행 설정
 
 1. 기존 `npm install` 후 `npm run dev`로 실행합니다.
-2. `.env.example`을 `.env`로 복사하고 `OPENROUTER_API_KEY`와 `OWNER_ADMIN_KEY`를 설정합니다. 두 키는 서버 전용이며, Git에 커밋하거나 `VITE_` 접두사를 붙이지 않습니다. 관리자 키는 24자 이상의 임의 문자열을 사용합니다.
-3. 화면 아래 **사장님 공간**에서 가게를 선택해 가입 신청합니다. 관리자가 같은 화면의 **관리자 승인** 탭에서 키를 입력해 신청 내용을 확인하고 실제 가게 소유 여부를 확인한 뒤 승인합니다. 승인 후 이메일·비밀번호로 로그인합니다. 가입 신청만으로 캠페인을 게시할 수 없습니다.
+2. `.env.example`을 `.env`로 복사하고 `OPENROUTER_API_KEY`를 설정합니다. 서버 전용 키이므로 Git에 커밋하거나 `VITE_` 접두사를 붙이지 않습니다. 사장님 승인은 `AUTH_ADMIN_USER_IDS`에 등록된 관리자 계정으로 로그인해 사장님 공간에서 합니다.
+3. 로그인한 뒤 **사장님 공간**에서 가게를 선택해 관리 권한을 신청합니다. 관리자 계정으로 로그인하면 같은 화면에 **사장님 신청 승인** 목록이 보이며, 실제 가게 소유 여부를 확인한 뒤 승인합니다. 가입 신청만으로 캠페인을 게시할 수 없습니다.
 
 AI 연결은 [OpenRouter 채팅 API](https://openrouter.ai/docs/quickstart), [전사 API](https://openrouter.ai/blog/announcing-audio-apis/), [이미지 API](https://openrouter.ai/docs/guides/overview/multimodal/image-generation)를 사용합니다. 기본 모델은 `.env.example`에 적혀 있고 변경할 수 있습니다. API 키가 없으면 실제 AI 생성 요청은 오류를 보여줍니다. 이미지 생성은 API 비용이 들 수 있어 시간당 네 번으로 제한했습니다. 지금은 짧은 영상 대신 이미지 생성을 구현했습니다.
 

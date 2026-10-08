@@ -1,3 +1,4 @@
+import {authConfig,authenticate,requireUser} from './auth.js';
 import {checkDatabase} from './db/pool.js';
 import express from 'express';
 import cors from 'cors';
@@ -10,6 +11,8 @@ import {createContributionRouter} from './contributionRoutes.js';
 import {communityRoutes} from './communityRoutes.js';
 import {createGroupRouter} from './groupRoutes.js';
 import {createOwnerMarketingRouter} from './ownerMarketingRoutes.js';
+import {ownerMarketingStore} from './services/ownerMarketingStore.js';
+import {userDataStore} from './services/userDataStore.js';
 
 dotenv.config();
 
@@ -21,7 +24,11 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({limit:'8mb'}));
-app.use('/api/community', createContributionRouter());
+app.get('/api/auth/config',(req,res)=>{const config=authConfig();if(!config.url||!config.key)return res.status(503).json({error:'로그인 설정이 필요해요.'});res.json(config);});
+app.get('/api/auth/me',authenticate,requireUser,async(req,res)=>{const a=await ownerMarketingStore.accountForUser(req.user.id);res.json({user:{id:req.user.id,email:req.user.email,nickname:req.user.user_metadata?.nickname||'월계 이웃',admin:req.isAdmin,ownerPlaceId:a?.status==='approved'?a.placeId:null}});});
+app.get('/api/me/data',authenticate,requireUser,async(req,res)=>{try{res.json(await userDataStore.get(req.user.id));}catch{res.status(503).json({error:'내 기록을 불러오지 못했어요.'});}});
+app.put('/api/me/data',authenticate,requireUser,async(req,res)=>{try{res.json(await userDataStore.set(req.user.id,req.body));}catch{res.status(503).json({error:'내 기록을 저장하지 못했어요.'});}});
+app.use('/api/community', authenticate, createContributionRouter({requireAccount:true,roleFor:async(req,placeId)=>{if(!req.user)return 'neighbor';const a=await ownerMarketingStore.accountForUser(req.user.id);return a?.status==='approved'&&a.placeId===placeId?'owner':'neighbor';}}));
 app.use('/api/community', communityRoutes);
 app.use('/api/groups', createGroupRouter());
 app.use('/api/owner', createOwnerMarketingRouter());

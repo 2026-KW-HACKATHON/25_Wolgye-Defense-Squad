@@ -85,3 +85,7 @@
 .community .new-place-form .row{gap:12px;flex-wrap:wrap}
 .community [hidden]{display:none!important}
 @media(max-width:600px){.community .discovery-intro{padding:20px}.community .discovery-intro b{font-size:20px}.community .new-place-form .location-map-toolbar .button{padding:10px;font-size:14px}.community .discovery-card{padding:20px}}
+.account-chip{display:flex;align-items:center;gap:6px;max-width:180px;padding:6px 12px;border-radius:20px;background:#e5eadb;color:var(--ink);font-weight:700}.account-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.account-chip.active{background:var(--lime)}.login-button{padding:8px 18px;min-height:38px}
+@media(max-width:760px){.account-chip{max-width:120px;padding:5px 10px;font-size:14px}.login-button{padding:6px 14px;min-height:34px}}
+.role-badge{display:inline-block;font-size:11px;font-weight:800;padding:1px 8px;border-radius:10px;background:#eceee6;color:#5d665b;vertical-align:middle}.role-badge.owner{background:var(--ink);color:var(--lime)}
+.place-info{margin:18px 0}.place-info .row{display:flex;justify-content:space-between;align-items:center}.info-value{display:grid;gap:4px;white-space:pre-wrap}.info-value small{font-weight:400;color:var(--muted)}

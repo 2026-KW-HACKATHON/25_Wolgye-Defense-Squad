@@ -41,3 +41,26 @@ test('recommendation quotes only actual dated reports and highlights requested u
   assert.match(valid.items[0].reason,/2026-10-01 이웃 제보/);assert.match(valid.items[0].reason,/검증되지 않은/);assert.match(valid.items[0].checks,/가격.*시간/);
   const invalid=validateRecommendation({...base,evidence:[{id:'1',reportId:'r',quote:'예약 가능'}]},[p]);assert.ok(!invalid.items[0].reason.includes('예약 가능'));
 });
+
+test('anyone can edit place info; owner and neighbor edits are labelled and kept in history',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wolgye-info-')),file=path.join(dir,'community.json');
+  const store=createCommunityStore(file),app=express();app.use(express.json());
+  app.use(createContributionRouter({store,catalog:async()=>({items:store.places()}),roleFor:async req=>req.get('x-role')==='owner'?'owner':'neighbor'}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+  const url=`http://127.0.0.1:${server.address().port}`;
+  const call=async(route,method,body,role='')=>{const r=await fetch(url+route,{method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${'a'.repeat(64)}`,'x-role':role},body:JSON.stringify(body)});return {status:r.status,...await r.json()};};
+  try{
+    const place=(await call('/places','POST',{name:'정보 가게',kind:'분식',address:'월계1동',lat:37.6193,lng:127.0583})).place;
+    const route=`/places/${place.id}/info`;
+    assert.equal((await call(route,'PUT',{fields:{menu:'떡볶이 4000원'},observedAt:'2999-01-01',author:'이웃'})).status,400);
+    const neighbor=await call(route,'PUT',{fields:{menu:'떡볶이 4000원',hours:'11시~20시'},observedAt:'2026-10-01',author:'이웃'});
+    assert.equal(neighbor.status,200);assert.equal(neighbor.info.fields.menu.role,'neighbor');
+    const owner=await call(route,'PUT',{fields:{menu:'떡볶이 4500원',hours:'11시~20시'},observedAt:'2026-10-02',author:'사장'},'owner');
+    assert.equal(owner.info.fields.menu.role,'owner');assert.equal(owner.info.fields.hours.role,'neighbor');
+    assert.equal(owner.info.history.length,3);assert.equal(owner.info.history[0].editorHash,undefined);
+    assert.equal((await call(route,'PUT',{fields:{menu:'떡볶이 4500원'},observedAt:'2026-10-02',author:'사장'},'owner')).status,400);
+    const post=await call('/posts','POST',{placeId:place.id,title:'오늘 할인',body:'2시까지 할인',author:'사장',type:'영업 소식',observedAt:'2026-10-02'},'owner');
+    assert.equal(post.post.authorRole,'owner');
+    assert.equal(createCommunityStore(file).placeInfo()[place.id].fields.menu.value,'떡볶이 4500원');
+  }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
+});
