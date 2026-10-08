@@ -38,8 +38,6 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const [message,setMessage]=useState('');
   const [recording,setRecording]=useState(false);
   const [activeVisual,setActiveVisual]=useState(null); // { type: 'carousel' | 'card', data: ... }
-  const [brief,setBrief]=useState('');
-  const [format,setFormat]=useState('square');
   const [proposals,setProposals]=useState([]);
   const [preview,setPreview]=useState({});
   const [busyAction,setBusyAction]=useState(null); // 'chat' | 'visual' | null
@@ -183,27 +181,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
 
       // 히스토리(proposals) 자동 갱신
       api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-    },promptBrief,'visual');
-  }
-
-  // 1. 인스타 캐러셀 카드뉴스 쾌속 생성 (대화 내역 100% 반영)
-  async function generateQuickCarousel(promptText){
-    const briefText=promptText||message.trim()||`${selectedPlace?.name||'우리 가게'} 대표 메뉴와 매력을 담은 인스타 카드뉴스`;
-    await synthesizeVisual('carousel',briefText);
-  }
-
-  // 2. 연예인·셀럽 추천 스토리 쾌속 생성 (사장님이 지정한 연예인 및 대화 내역 100% 반영)
-  async function generateQuickCelebStory(){
-    const text=message.trim();
-    const briefText=text?`[셀럽 추천 스토리] ${text}`:`${selectedPlace?.name||'우리 가게'} 화제의 인기 아이돌·셀럽 극찬 맛집 스토리`;
-    await synthesizeVisual('carousel',briefText);
-  }
-
-  // 3. 파격 할인 단일 포스터 쾌속 생성 (대화 내역 반영 및 실사 사진 결합)
-  async function generateQuickPoster(promptText){
-    const userText=promptText||message.trim()||'주말 학생 할인 20% 파격 혜택 단일 포스터';
-    const briefText=userText.includes('포스터')?userText:`${userText} 단일 포스터로 만들어줘`;
-    await synthesizeVisual('card',briefText);
+    },'visual');
   }
 
 
@@ -244,21 +222,6 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
     }
   }
 
-  // 제안 생성
-  async function generate(e){
-    e?.preventDefault();
-    await run(async()=>{
-      const d=await api('/proposals',{method:'POST',body:{brief,format}});
-      const updated=(await api('/proposals')).items;
-      setProposals(updated);
-      setBrief('');
-      setNotice('포스터 제안을 생성했어요. 우측 스튜디오에서 다듬어 게시해 보세요.');
-      if(d.card){
-        setActiveVisual({type:'card',data:d.card});
-      }
-      if(d.hasImage)await showImage(d.id);
-    });
-  }
 
   async function showImage(id){
     if(preview[id])return;
@@ -441,43 +404,15 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
           ========================================================================= */}
           {section==='studio'&&(
             <section className="owner-card studio-card">
-              {/* 스튜디오 상단 헤더 & 원클릭 퀵 액션 */}
+              {/* 스튜디오 상단 헤더 */}
               <div className="studio-header">
                 <div>
                   <h2 style={{margin:'0 0 6px',fontSize:'24px',fontWeight:900,color:'#0f172a'}}>
                     🎨 AI 홍보 스튜디오
                   </h2>
                   <p className="muted" style={{margin:0,fontSize:'13px'}}>
-                    AI와 대화하며 인스타그램 캐러셀(슬라이드 카드뉴스)과 포스터를 만들고, 동네 풍경·음식·연예인 사진을 검색해 자유롭게 꾸며보세요.
+                    AI와 대화하며 인스타그램 캐러셀 카드뉴스와 포스터를 만들고, 동네 풍경·음식·연예인 사진을 검색해 자유롭게 꾸며보세요.
                   </p>
-                </div>
-
-                <div className="studio-quick-chips">
-                  <button
-                    type="button"
-                    className="chip-btn"
-                    disabled={busy}
-                    onClick={()=>generateQuickCarousel()}
-                  >
-                    🔥 인스타 캐러셀 카드뉴스 (3~5장)
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-btn"
-                    disabled={busy}
-                    onClick={generateQuickCelebStory}
-                    title="입력창에 특정 연예인/아이돌(예: 카리나, 뉴진스 등)을 적고 누르면 해당 인물로 제작됩니다"
-                  >
-                    ⭐ 연예인·셀럽 먹방 추천 스토리
-                  </button>
-                  <button
-                    type="button"
-                    className="chip-btn"
-                    disabled={busy}
-                    onClick={()=>generateQuickPoster()}
-                  >
-                    ⚡ 파격 할인 단일 포스터
-                  </button>
                 </div>
               </div>
 
@@ -555,39 +490,13 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                   </div>
 
 
-                  {/* 대화 내역 기반 One-Pass 확정 생성 버튼 바 (대화가 있을 때 노출) */}
-                  {chat.length>0&&(
-                    <div style={{display:'flex',gap:'8px',margin:'10px 0 6px',flexWrap:'wrap'}}>
-                      <button
-                        type="button"
-                        className="button lime small"
-                        disabled={busy}
-                        onClick={()=>synthesizeVisual('carousel')}
-                        style={{flex:1,minWidth:'150px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',fontWeight:700}}
-                        title="지금까지 나눈 대화 내용을 바탕으로 4:5 인스타그램 캐러셀 카드뉴스를 한 번에 생성합니다"
-                      >
-                        <Sparkles size={14}/> ✨ 대화 내용으로 카드뉴스 완성
-                      </button>
-                      <button
-                        type="button"
-                        className="button outline small"
-                        disabled={busy}
-                        onClick={()=>synthesizeVisual('card')}
-                        style={{flex:1,minWidth:'150px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',fontWeight:700}}
-                        title="지금까지 나눈 대화 내용을 바탕으로 상업용 단일 포스터를 한 번에 생성합니다"
-                      >
-                        📜 대화 내용으로 단일 포스터 완성
-                      </button>
-                    </div>
-                  )}
-
                   {/* 대화 입력 폼 (텍스트 + 음성 녹음 + 전송) */}
                   <form className="owner-chat-form" onSubmit={send}>
                     <input
                       value={message}
                       onChange={e=>setMessage(e.target.value)}
                       maxLength={1000}
-                      placeholder="홍보 고민, 이벤트 기획을 말해주세요 (빠른 1:1 상담)"
+                      placeholder="홍보 고민, 이벤트 기획을 적어주세요 (빠른 1:1 상담)"
                     />
                     <button
                       type="button"
@@ -598,43 +507,33 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                       {recording?'끝내기':<Mic size={18}/>}
                     </button>
                     <button className="button dark" disabled={busy||!message.trim()}>
-                      <Send size={17}/> 보내기
+                      <Send size={17}/> 상담하기
                     </button>
                   </form>
 
-                  {/* 기획 목적 직접 작성 폼 (이전 proposals 제안 생성 기능 통합) */}
-                  <details className="studio-direct-generator" style={{marginTop:'12px',background:'#f8fafc',padding:'10px 14px',borderRadius:'12px',border:'1px solid #e2e8f0'}}>
-                    <summary style={{cursor:'pointer',fontSize:'13px',fontWeight:700,color:'#334155'}}>
-                      🎯 기획 프롬프트로 바로 생성하기 (포스터 / 카드뉴스)
-                    </summary>
-                    <div style={{padding:'10px 0 4px'}}>
-                      <textarea
-                        value={brief}
-                        onChange={e=>setBrief(e.target.value)}
-                        maxLength={1000}
-                        placeholder="예: 광운대 학생들을 위한 가성비 점심 세트와 성시경 연예인 추천을 담은 인스타 카드뉴스"
-                        style={{width:'100%',minHeight:'70px',borderRadius:'10px',padding:'10px',boxSizing:'border-box',fontSize:'13px'}}
-                      />
-                      <div style={{display:'flex',gap:'8px',marginTop:'8px',flexWrap:'wrap'}}>
-                        <button
-                          type="button"
-                          className="button lime"
-                          disabled={busy||!brief.trim()}
-                          onClick={()=>synthesizeVisual('carousel',brief)}
-                        >
-                          📸 인스타 캐러셀 카드뉴스 생성
-                        </button>
-                        <button
-                          type="button"
-                          className="button outline"
-                          disabled={busy||!brief.trim()}
-                          onClick={()=>synthesizeVisual('card',brief)}
-                        >
-                          📜 단일 포스터 생성
-                        </button>
-                      </div>
-                    </div>
-                  </details>
+                  {/* 단 1쌍의 핵심 제작 버튼: 카드뉴스 생성 / 포스터 생성 */}
+                  <div style={{display:'flex',gap:'10px',marginTop:'12px'}}>
+                    <button
+                      type="button"
+                      className="button lime"
+                      disabled={busy}
+                      onClick={()=>synthesizeVisual('carousel')}
+                      style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',fontWeight:800,padding:'11px 14px'}}
+                      title="대화 내역 또는 입력창 내용을 바탕으로 인스타그램 4:5 캐러셀 카드뉴스를 제작합니다"
+                    >
+                      <Sparkles size={16}/> 📸 인스타 카드뉴스 생성
+                    </button>
+                    <button
+                      type="button"
+                      className="button outline"
+                      disabled={busy}
+                      onClick={()=>synthesizeVisual('card')}
+                      style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',gap:'6px',fontWeight:800,padding:'11px 14px'}}
+                      title="대화 내역 또는 입력창 내용을 바탕으로 상업용 단일 포스터를 제작합니다"
+                    >
+                      📜 단일 포스터 생성
+                    </button>
+                  </div>
                 </div>
 
                 {/* 2. 우측 칼럼: 실시간 비주얼 스튜디오 (캐러셀 / 포스터 렌더링 & 편집) */}
@@ -705,17 +604,9 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                       <div className="studio-empty-viewer">
                         <div style={{fontSize:'42px',marginBottom:'12px'}}>✨</div>
                         <h3>제작 중인 홍보 콘텐츠가 없습니다</h3>
-                        <p className="muted">
-                          좌측에서 AI와 대화하거나 상단의 <b>[🔥 인스타 캐러셀 카드뉴스]</b> 버튼을 누르면 실시간으로 슬라이드가 생성되고 사진을 교체할 수 있습니다.
+                        <p className="muted" style={{maxWidth:'360px',lineHeight:'1.6'}}>
+                          좌측에서 AI와 상담을 나눈 뒤 <b>[📸 인스타 카드뉴스 생성]</b> 또는 <b>[📜 단일 포스터 생성]</b> 버튼을 누르면 이 화면에 완성된 콘텐츠가 나타납니다.
                         </p>
-                        <button
-                          type="button"
-                          className="button lime"
-                          disabled={busy}
-                          onClick={()=>generateQuickCarousel('월계1동 골목 맛집 인스타 캐러셀 카드뉴스')}
-                        >
-                          🔥 예시 인스타 카드뉴스 1초 생성
-                        </button>
                       </div>
                     )}
                   </div>
