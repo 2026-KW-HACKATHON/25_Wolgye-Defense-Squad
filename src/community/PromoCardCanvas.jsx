@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 export const THEME_STYLES = {
   warm: {
@@ -1184,6 +1184,7 @@ export function InstagramCarouselView({
   carousel,
   shopName,
   editable = false,
+  publicView = false,
   onEdit,
   className = '',
   initialIndex = 0,
@@ -1265,11 +1266,11 @@ export function InstagramCarouselView({
     : rawPhotoUrl;
 
   return (
-    <div className={`instagram-feed-card-wrapper ${className}`} style={{ margin: '14px 0' }}>
+    <div className={`instagram-feed-card-wrapper ${publicView ? 'public-carousel-view' : ''} ${className}`} style={{ margin: publicView ? '0' : '14px 0' }}>
       {/* =========================================================================
           상단 컨트롤 바: 규격 (4:5 인스타 피드 vs 1:1) & PNG 다운로드
       ========================================================================= */}
-      <div
+      {!publicView && <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -1394,7 +1395,7 @@ export function InstagramCarouselView({
             📥 전 슬라이드 PNG 받기
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* =========================================================================
           실제 인스타그램 피드 포스트 프레임 (외곽 그림자 & 모바일 뷰어)
@@ -1406,13 +1407,13 @@ export function InstagramCarouselView({
           border: '1px solid #e2e8f0',
           boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
           overflow: 'hidden',
-          maxWidth: '460px',
+          maxWidth: publicView ? '430px' : '460px',
           margin: '0 auto',
           position: 'relative'
         }}
       >
         {/* 1. 인스타그램 공식 상단 프로필 헤더 */}
-        <div
+        {!publicView && <div
           style={{
             padding: '12px 16px',
             display: 'flex',
@@ -1467,7 +1468,7 @@ export function InstagramCarouselView({
           <div style={{ fontSize: '18px', color: '#64748b', cursor: 'pointer' }}>
             •••
           </div>
-        </div>
+        </div>}
 
         {/* 2. 메인 사진 뷰포트 (100% 실제 사진 풀블리드 + 인스타그램 스티커 오버레이) */}
         <div
@@ -1546,7 +1547,7 @@ export function InstagramCarouselView({
             <h2
               style={{
                 margin: '0 0 8px',
-                fontSize: aspectRatio === '4:5' ? '24px' : '21px',
+                fontSize: publicView ? 'clamp(18px, 4.5vw, 23px)' : aspectRatio === '4:5' ? '24px' : '21px',
                 fontWeight: 900,
                 lineHeight: 1.35,
                 color: '#ffffff',
@@ -1610,7 +1611,7 @@ export function InstagramCarouselView({
                 <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
                   “{currentSlide.quote || '이 집 국물은 진짜입니다. 꼭 드셔보세요!'}”
                 </div>
-                {currentSlide.body && (
+                {!publicView && currentSlide.body && (
                   <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
                     {currentSlide.body}
                   </div>
@@ -1636,7 +1637,7 @@ export function InstagramCarouselView({
                 <span style={{ fontSize: '18px', fontWeight: 900, color: '#fde047' }}>
                   {currentSlide.highlight}
                 </span>
-                {currentSlide.body && (
+                {!publicView && currentSlide.body && (
                   <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: 700 }}>
                     {currentSlide.body}
                   </span>
@@ -1645,7 +1646,7 @@ export function InstagramCarouselView({
             )}
 
             {/* 일반 본문 설명 */}
-            {currentSlide.type !== 'celebrity' && !currentSlide.highlight && currentSlide.body && (
+            {!publicView && currentSlide.type !== 'celebrity' && !currentSlide.highlight && currentSlide.body && (
               <div
                 style={{
                   background: 'rgba(0,0,0,0.75)',
@@ -1663,7 +1664,7 @@ export function InstagramCarouselView({
             )}
 
             {/* 마지막 장 전용 강력한 CTA 액션 유도 스티커 */}
-            {(currentSlide.type === 'cta' || activeIndex === slides.length - 1) && (
+            {!publicView && (currentSlide.type === 'cta' || activeIndex === slides.length - 1) && (
               <div
                 style={{
                   background: 'linear-gradient(135deg, #fde047 0%, #facc15 100%)',
@@ -1702,7 +1703,7 @@ export function InstagramCarouselView({
           </div>
 
           {/* 하단 스와이프 유도 알약 스티커 */}
-          <div
+          {!publicView && <div
             style={{
               alignSelf: 'center',
               background: activeIndex === slides.length - 1 ? '#fde047' : 'rgba(255, 255, 255, 0.95)',
@@ -1718,10 +1719,10 @@ export function InstagramCarouselView({
             {activeIndex === slides.length - 1
               ? `🎉 마지막 장입니다 · 매장에서 만나요! (${activeIndex + 1}/${slides.length})`
               : `👉 옆으로 넘겨서 계속 보기 (${activeIndex + 1}/${slides.length})`}
-          </div>
+          </div>}
 
           {/* 슬라이드 좌우 네비게이션 플로팅 화살표 버튼 */}
-          <div
+          {!publicView && <div
             style={{
               position: 'absolute',
               top: '50%',
@@ -1795,11 +1796,11 @@ export function InstagramCarouselView({
             >
               ›
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* 3. 인스타그램 하단 피드 액션 바 & 캡션 */}
-        <div style={{ padding: '12px 16px', background: '#ffffff' }}>
+        {!publicView && <div style={{ padding: '12px 16px', background: '#ffffff' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
             <div style={{ display: 'flex', gap: '14px', fontSize: '18px', cursor: 'pointer' }}>
               <span>❤️</span>
@@ -1846,7 +1847,39 @@ export function InstagramCarouselView({
               #월계동맛집 #광운대맛집 #먹스타그램 #성시경먹방 #월계밥상
             </div>
           </div>
-        </div>
+        </div>}
+        {publicView && (
+          <>
+            <nav className="public-carousel-controls" aria-label="카드뉴스 페이지 이동">
+              <button
+                type="button"
+                disabled={activeIndex === 0}
+                onClick={() => { setActiveIndex(activeIndex - 1); onSlideChange?.(activeIndex - 1); }}
+              >이전</button>
+              <div className="public-carousel-progress">
+                <span>{activeIndex + 1} / {slides.length}</span>
+                <div>
+                  {slides.map((_, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-label={`${index + 1}장 보기`}
+                      aria-current={index === activeIndex ? 'step' : undefined}
+                      className={index === activeIndex ? 'active' : ''}
+                      onClick={() => { setActiveIndex(index); onSlideChange?.(index); }}
+                    />
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={activeIndex === slides.length - 1}
+                onClick={() => { setActiveIndex(activeIndex + 1); onSlideChange?.(activeIndex + 1); }}
+              >다음</button>
+            </nav>
+            {currentSlide.body && <p className="public-carousel-copy">{currentSlide.body}</p>}
+          </>
+        )}
       </div>
 
       {/* 4. 수정 서랍 (선택 시 열림) */}

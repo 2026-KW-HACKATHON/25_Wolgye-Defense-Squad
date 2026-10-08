@@ -1,0 +1,183 @@
+.place-detail-promos-container {
+  margin: 22px 0;
+  padding: 18px;
+  border: 1px solid #dce6d5;
+  border-radius: 20px;
+  background: #f6f8f3;
+}
+
+.place-promo-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.place-promo-eyebrow {
+  color: #66796c;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.place-promo-heading h3 {
+  margin: 3px 0 0;
+  color: #173d32;
+  font-size: 18px;
+}
+
+.place-promo-heading h3 span,
+.place-promo-heading small {
+  color: #617366;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.place-promo-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.community .place-promo-controls button,
+.community .place-promo-back {
+  min-width: 72px;
+  padding: 8px 12px;
+  border: 1px solid #bfd0c0;
+  border-radius: 10px;
+  background: #fff;
+  color: #173d32;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.place-promo-controls span {
+  color: #385448;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.place-promo-item {
+  padding: 14px;
+  border: 1px solid #e1e9dc;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.place-promo-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px 10px;
+  margin-bottom: 12px;
+}
+
+.place-promo-meta b {
+  flex: 1 1 200px;
+  color: #173d32;
+  font-size: 14px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.place-promo-meta small {
+  color: #718075;
+  font-size: 11px;
+}
+
+.place-promo-type {
+  flex: none;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e5efdb;
+  color: #315b46;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.place-promo-poster {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 560px;
+  margin: 0 auto;
+  border-radius: 12px;
+  object-fit: contain;
+}
+
+.community .place-promo-cover {
+  position: relative;
+  display: block;
+  width: min(100%, 430px);
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: #e5efdb;
+  text-align: center;
+}
+
+.place-promo-cover img {
+  display: block;
+  width: 100%;
+  max-height: 540px;
+  object-fit: contain;
+}
+
+.place-promo-cover-empty {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  padding: 20px;
+  color: #173d32;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.place-promo-open {
+  display: block;
+  padding: 12px 16px;
+  background: #173d32;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.place-promo-cover:hover .place-promo-open {
+  background: #315b46;
+}
+
+.place-promo-reader {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.place-promo-reader .place-promo-back {
+  justify-self: start;
+}
+
+.place-promo-reader .instagram-feed-card-wrapper {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .place-detail-promos-container {
+    padding: 12px;
+  }
+
+  .place-promo-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .place-promo-item {
+    padding: 10px;
+  }
+}
