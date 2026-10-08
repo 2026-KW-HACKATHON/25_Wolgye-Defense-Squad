@@ -8,7 +8,7 @@ communityRoutes.get('/places',async(req,res)=>{
 communityRoutes.post('/search',async(req,res)=>{
   const message=req.body?.message;
   if(typeof message!=='string'||!message.trim()||message.length>3000)return res.status(400).json({error:'검색어를 1~3000자 사이로 입력해 주세요.'});
-  try{res.json(await searchCommunity(message.trim()));}catch(e){res.status(502).json({error:e.message});}
+  try{res.json(await searchCommunity(message.trim(),{origin:req.body?.origin}));}catch(e){res.status(502).json({error:e.message});}
 });
 communityRoutes.post('/recommend',async(req,res)=>{
   const message=req.body?.message;
@@ -16,5 +16,5 @@ communityRoutes.post('/recommend',async(req,res)=>{
   if(Date.now()-windowStart>60000){windowStart=Date.now();count=0;}
   if(active>=2||count>=12)return res.status(429).json({error:'현재 요청이 많아요. 잠시 후 다시 시도해 주세요.'});
   active++;count++;
-  try{res.json(await recommendCommunity(message.trim()));}catch(e){res.status(502).json({error:e.name==='TimeoutError'?'답변이 지연되고 있어요. 다시 시도해 주세요.':e.message});}finally{active--;}
+  try{res.json(await recommendCommunity(message.trim(),{origin:req.body?.origin}));}catch(e){res.status(502).json({error:e.name==='TimeoutError'?'답변이 지연되고 있어요. 다시 시도해 주세요.':e.message});}finally{active--;}
 });

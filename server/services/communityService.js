@@ -5,6 +5,8 @@ import {communityStore} from './communityStore.js';
 import {infoReports,publicInfo} from './placeInfo.js';
 import {mergeSupplementalPlaces} from './supplementalPlaces.js';
 import {ownerMarketingStore} from './ownerMarketingStore.js';
+import {nearbyCategoryMatches,nearbyShortlist} from './nearbySearch.js';
+import {travelEstimate} from '../../src/community/placeBrowse.js';
 import fs from 'node:fs';
 const boundary = JSON.parse(fs.readFileSync(new URL('../../src/community/wolgye1-boundary.json', import.meta.url), 'utf8'));
 function inRing(x,y,ring) {
@@ -115,14 +117,24 @@ export function validateRecommendation(value, places, message='') {
   return {answer,summary,items,notice:'조건 충족이 확정된 추천이 아닌 추가 확인용 후보입니다. 입력한 필수 조건을 완화하지 않습니다.'};
 }
 let aiWindowStart=Date.now(),aiCount=0,aiActive=0;
-export async function recommendCommunity(message) {
+export async function recommendCommunity(message,{origin=null}={}) {
   if(Date.now()-aiWindowStart>=3600000){aiWindowStart=Date.now();aiCount=0;}
   if(aiCount>=100||aiActive>=2)throw new Error('AI 사용량이 많아요. 잠시 후 다시 시도해 주세요.');
   aiCount++;aiActive++;
-  try{return await runRecommendation(message);}finally{aiActive--;}
+  try{return await runRecommendation(message,origin);}finally{aiActive--;}
 }
-async function runRecommendation(message) {
+async function runRecommendation(message,origin) {
   const catalog=await getCommunityPlaces();
+  const nearby=nearbyCategoryMatches(message,catalog.items,origin);
+  if(nearby){
+    const available={...nearby,items:nearby.items.filter(place=>openingStatus(place)!=='closed')};
+    const items=nearbyShortlist(available).map(place=>({...place,
+      reason:`등록 업종: ${nearby.categoryOf(place)} · ${nearby.originLabel} 기준 거리 약 ${travelEstimate(nearby.origin,place)?.distance}`,
+      checks:'메뉴·가격·영업시간은 등록 정보에서 별도로 확인해 주세요.'}));
+    return {items,understood:parseCondition(message),method:'category-distance',origin:nearby.origin,originLabel:nearby.originLabel,
+      answer:items.length?`${nearby.categories.join(' 또는 ')}으로 등록된 가게를 ${nearby.originLabel} 기준 가까운 순으로 골랐어요. 실제 이동 경로와 영업 여부는 확인해 주세요.`:'해당 업종에서 좌표가 확인되고 영업 종료가 확실하지 않은 가게를 찾지 못했어요.',
+      notice:'업종과 지도 좌표를 사용했어요. 메뉴·가격·영업시간 정보는 확인되지 않을 수 있어요.',retrievedAt:catalog.retrievedAt};
+  }
   const retrieval=retrieveCommunity(message,catalog.items);
   // 예산·방문 시각은 AI 감이 아니라 가게 정보(메뉴 가격·영업시간)로 직접 판정한다.
   const cond=parseCondition(message),timeCond={wants:cond.wants,excludes:[],budget:cond.budget,hour:cond.hour};
@@ -155,13 +167,38 @@ async function runRecommendation(message) {
   return {...result,understood:parseCondition(message),method:excludedByHours?'hours-filter':'openrouter',retrievedAt:catalog.retrievedAt,search:{method:retrieval.method,searchedPlaces:retrieval.searchedPlaces,searchedDocuments:retrieval.searchedDocuments}};
 }
 
-export async function searchCommunity(message) {
+export function classifySearchPlaces(source,condition) {
+  const hasVerifiableConditions=condition.budget!=null||condition.hour!=null;
+  const items=source.map(place=>{
+    const checks=evaluate(place,condition);
+    if(checks.some(check=>check.status==='violated'))return null;
+    const hardChecks=checks.filter(check=>check.kind==='budget'||check.kind==='hour');
+    return {...place,conditionStatus:hasVerifiableConditions&&hardChecks.every(check=>check.status==='met')?'confirmed':hasVerifiableConditions?'unverified':null,conditionEvidence:hardChecks};
+  }).filter(Boolean);
+  if(hasVerifiableConditions)items.sort((a,b)=>Number(b.conditionStatus==='confirmed')-Number(a.conditionStatus==='confirmed'));
+  return items;
+}
+
+export function isConditionOnlySearch(message,condition=parseCondition(message)) {
+  if(condition.budget==null&&condition.hour==null)return false;
+  const remaining=(condition.hour==null?searchableRequest(message):searchableRequest(message).replace(/(?:아침|오전|오후|점심|저녁|밤)?\s*\d{1,2}\s*시(?:\s*\d{1,2}\s*분)?/g,' ')).trim();
+  return !remaining||remaining.split(/\s+/).every(word=>['식당','가게','곳','추천','추천해줘','해주세요','해줘','찾아줘','보여줘','좀'].includes(word));
+}
+
+export async function searchCommunity(message,{origin=null}={}) {
   const catalog=await getCommunityPlaces();
   const condition=parseCondition(message);
-  const query=searchableRequest(message);
-  const retrieval=retrieveCommunity(message,catalog.items,Date.now(),Infinity);
-  const conditionOnly=!query.trim()&&(condition.budget||condition.hour!==null);
-  const source=conditionOnly?catalog.items:retrieval.items;
-  const items=source.filter(place=>!evaluate(place,condition).some(check=>check.status==='violated'));
-  return {items,answer:conditionOnly?`등록된 가게 중 ${items.length}곳을 보여드려요. 조건 충족 여부는 가게별 정보를 확인해 주세요.`:items.length?`검색어와 관련된 ${items.length}곳을 찾았어요.`:'현재 등록된 정보에서 관련 가게를 찾지 못했어요.',retrievedAt:catalog.retrievedAt,notice:'가게 이름·업종·사장님 키워드·이웃 제보를 기준으로 검색했어요. 가격·영업 정보가 없으면 조건 충족 여부를 확인할 수 없어요.',search:{method:retrieval.method,searchedPlaces:retrieval.searchedPlaces,searchedDocuments:retrieval.searchedDocuments}};
+  const nearby=nearbyCategoryMatches(message,catalog.items,origin);
+  const retrieval=nearby?{items:nearby.items,method:'category-distance',searchedPlaces:catalog.items.length,searchedDocuments:catalog.items.length}:retrieveCommunity(message,catalog.items,Date.now(),Infinity);
+  const conditionOnly=isConditionOnlySearch(message,condition);
+  const source=nearby?nearby.items:conditionOnly?catalog.items:retrieval.items;
+  const hasVerifiableConditions=condition.budget!=null||condition.hour!=null;
+  const items=classifySearchPlaces(source,condition);
+  const confirmedCount=items.filter(place=>place.conditionStatus==='confirmed').length;
+  const conditionLabel=[condition.budget!=null?'예산':null,condition.hour!=null?'방문 시각':null].filter(Boolean).join('·');
+  return {items,hasVerifiableConditions,conditionLabel,confirmedCount,unverifiedCount:hasVerifiableConditions?items.length-confirmedCount:0,
+    answer:nearby?`${nearby.categories.join(' 또는 ')} 업종의 가게 ${items.length}곳을 ${nearby.originLabel} 기준 거리순으로 찾았어요.`:conditionOnly?`등록된 가게 중 ${items.length}곳을 찾았어요. 조건이 확인된 가게와 정보가 부족한 가게를 나눠 보세요.`:items.length?`검색어와 관련된 ${items.length}곳을 찾았어요.`:'현재 등록된 정보에서 관련 가게를 찾지 못했어요.',
+    origin:nearby?.origin||null,originLabel:nearby?.originLabel||null,sort:nearby?'distance':'relevance',retrievedAt:catalog.retrievedAt,
+    notice:nearby?'등록 업종과 지도 좌표로 정렬했어요. 메뉴·가격·영업시간은 별도로 확인해 주세요.':'가게 이름·업종·사장님 키워드·이웃 제보를 기준으로 검색했어요. 가격·영업 정보가 없으면 조건 충족 여부를 확인할 수 없어요.',
+    search:{method:retrieval.method,searchedPlaces:retrieval.searchedPlaces,searchedDocuments:retrieval.searchedDocuments}};
 }

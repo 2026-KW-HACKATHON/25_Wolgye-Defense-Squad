@@ -1,4 +1,13 @@
 export const placeCategories=['전체','한식','중식','일식','양식','패스트푸드','분식','카페·디저트','기타'];
+export const campusOrigin={lat:37.6193,lng:127.0583};
+
+export function wantsNearby(message){return /가까운|가까이|근처|주변|거리순|가장 가까/.test(String(message));}
+
+export function requestedCategories(message){
+  const categories=['한식','중식','일식','양식','분식','카페'].filter(category=>String(message).includes(category));
+  if(categories.length>1&&!/아니면|또는|혹은|이나|이거나/.test(message))return [];
+  return categories;
+}
 
 export function placeCategory(place) {
   // Kakao supplies a category path; a neighbor-added place supplies its own kind.
