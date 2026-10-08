@@ -60,12 +60,8 @@ export default function CommunityApp(){
  const [user,setUser]=useState(null),[me,setMe]=useState(null),[loginNext,setLoginNext]=useState(null);
  const name=me?.nickname||user?.user_metadata?.nickname||state.nickname;
  const [tab,setTab]=useState('news'),[modal,setModalRaw]=useState(null),[toast,setToast]=useState(''),[query,setQuery]=useState(''),[result,setResult]=useState(null),[mapView,setMapView]=useState(false);
-<<<<<<< HEAD
  const [suggestBusy,setSuggestBusy]=useState(false);
- function setModal(value){if(value&&['post','newPlace','delete','editInfo'].includes(value.type)&&!user){setLoginNext(()=>()=>setModalRaw(value));setModalRaw({type:'login'});return;}setModalRaw(value);}
-=======
  function setModal(value){if(value&&['post','newPlace','delete','editInfo'].includes(value.type)&&!user){setLoginNext(()=>()=>setModalRaw(value));setModalRaw({type:'login',back:value.back});return;}setModalRaw(value);}
->>>>>>> origin/feat/midterm-community-demo
  useEffect(()=>{let stop=false,subscription;getAuth().then(c=>{if(stop)return;subscription=c.auth.onAuthStateChange((_event,session)=>{setUser(session?.user||null);}).data.subscription;return c.auth.getUser().then(({data})=>{if(!stop)setUser(data.user);});}).catch(()=>{});return()=>{stop=true;subscription?.unsubscribe();};},[]);
  const stateRef=useRef(state);stateRef.current=state;const [synced,setSynced]=useState(false);
  const backdropPointerStart=useRef(false);
