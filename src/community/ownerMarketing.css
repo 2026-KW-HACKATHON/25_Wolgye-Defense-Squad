@@ -5,4 +5,39 @@
 
 /* 포스터 (AI 홍보 대화·제안 검토) */
 .owner-poster{margin:12px 0}.owner-poster .button.full{width:100%;margin-top:6px}
-.owner-chat-msg{display:flex;flex-direction:column}.owner-chat-msg.user{align-items:flex-end}
+.owner-chat-msg{display:flex;flex-direction:column;margin-bottom:8px}.owner-chat-msg.user{align-items:flex-end}
+.chat-card-preview-btn{margin-top:6px}
+
+/* AI 홍보 스튜디오 통합 레이아웃 */
+.studio-card{padding:26px}
+.studio-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid #e7e9df}
+.studio-quick-chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip-btn{background:#f1f4e7;border:1px solid #d5e4b8;color:#273b18;padding:8px 14px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s}
+.chip-btn:hover{background:#d5f260;border-color:#b9de3b;transform:translateY(-1px)}
+
+.studio-split-layout{display:grid;grid-template-columns:1fr 1.15fr;gap:24px;align-items:start}
+@media(max-width:880px){
+  .studio-split-layout{grid-template-columns:1fr}
+}
+.studio-left-col,.studio-right-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.studio-box-title{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:800;color:#1e293b;padding-bottom:6px}
+.studio-box-title .badge-tag{background:#1b3b11;color:#d5f260;font-size:11px;padding:3px 8px;border-radius:6px;font-weight:800}
+
+.studio-chat-box{height:420px;overflow-y:auto;background:#f8faf6;border:1px solid #e6e9de;border-radius:18px;padding:18px}
+.studio-chat-empty{padding:20px 14px;color:#475569;font-size:13px;line-height:1.6}
+.studio-chat-empty ul{padding-left:18px;margin:10px 0 0}
+.studio-chat-empty li{margin-bottom:4px;color:#334155}
+
+.studio-direct-generator summary{list-style:none}
+.studio-direct-generator summary::-webkit-details-marker{display:none}
+
+.studio-viewer-box{background:#f1f4ea;border:1px solid #dce2d1;border-radius:20px;padding:20px;min-height:500px;display:flex;flex-direction:column;justify-content:center}
+.studio-empty-viewer{text-align:center;padding:48px 20px;color:#475569}
+.studio-empty-viewer h3{margin:0 0 8px;font-size:18px;color:#1e293b}
+.studio-empty-viewer p{margin:0 0 20px;font-size:13px;max-width:380px;margin-left:auto;margin-right:auto}
+
+.studio-history-section{margin-top:32px}
+.studio-proposals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.studio-history-card{background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 3px 10px rgba(0,0,0,0.03);overflow:hidden}
+.button.small{padding:5px 10px;font-size:12px}
+
