@@ -703,3 +703,1134 @@ export function generatePromoImageBase64(card, shopName) {
     return null;
   }
 }
+
+/**
+ * 웹 이미지 검색 모달 (동네 배경, 메뉴 음식, 연예인/인플루언서 사진)
+ */
+export function ImageSearchModal({ isOpen, onClose, onSelect, initialQuery = '', shopName = '' }) {
+  const [query, setQuery] = useState(initialQuery || `${shopName || '월계동'} 맛집`);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const quickPills = [
+    { label: '🍲 대표 메뉴/음식', q: `${shopName || '골목 식당'} 대표 메뉴 음식` },
+    { label: '🏘️ 월계동·광운대 골목', q: '광운대역 월계동 골목 맛집' },
+    { label: '⭐ 성시경 먹방', q: '성시경 먹을텐데 감탄' },
+    { label: '⭐ 백종원 리액션', q: '백종원 맛집 감탄 리액션' },
+    { label: '⭐ 풍자 또간집', q: '풍자 또간집 맛집' },
+    { label: '🔥 핫플레이스 분위기', q: '감성 맛집 인테리어 요리' }
+  ];
+
+  const performSearch = async (targetQuery) => {
+    const q = (targetQuery || query).trim();
+    if (!q) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/owner/images?q=${encodeURIComponent(q)}&count=16`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '이미지 검색에 실패했어요.');
+      setImages(data.items || []);
+      if (!data.items?.length) setError('검색 결과가 없어요. 다른 키워드로 검색해 보세요.');
+    } catch (e) {
+      setError(e.message || '이미지를 불러오지 못했어요.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      const q = initialQuery || `${shopName || '월계동'} 맛집`;
+      setQuery(q);
+      performSearch(q);
+    }
+  }, [isOpen, initialQuery]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(6px)',
+        zIndex: 9999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px'
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '20px',
+          width: '100%',
+          maxWidth: '720px',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+              📷 웹 이미지 검색 및 사진 선택
+            </h3>
+            <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
+              우리 동네 배경, 먹음직스러운 음식, 연예인/인플루언서 사진을 골라 슬라이드에 적용하세요.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '50%',
+              width: '32px',
+              height: '32px',
+              cursor: 'pointer',
+              fontWeight: 800,
+              color: '#475569'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+          <form
+            onSubmit={e => { e.preventDefault(); performSearch(); }}
+            style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}
+          >
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="검색어 입력 (예: 성시경 먹방, 광운대 칼국수, 월계동 골목)"
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            />
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                padding: '10px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#1b3b11',
+                color: '#d5f260',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer'
+              }}
+            >
+              {loading ? '검색 중…' : '검색'}
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {quickPills.map((pill, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => { setQuery(pill.q); performSearch(pill.q); }}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '999px',
+                  padding: '4px 10px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#334155',
+                  cursor: 'pointer'
+                }}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+          {loading && (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+              <div style={{ fontSize: '24px', marginBottom: '8px' }}>🔍</div>
+              <p style={{ margin: 0, fontWeight: 600 }}>풍성한 웹 이미지를 찾고 있어요…</p>
+            </div>
+          )}
+
+          {error && !loading && (
+            <div style={{ textAlign: 'center', padding: '30px 0', color: '#ef4444', fontSize: '13px' }}>
+              {error}
+            </div>
+          )}
+
+          {!loading && !error && images.length > 0 && (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+                gap: '12px'
+              }}
+            >
+              {images.map((item, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => { onSelect(item.url); onClose(); }}
+                  style={{
+                    position: 'relative',
+                    aspectRatio: '1 / 1',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                  }}
+                >
+                  <img
+                    src={item.thumbnail || item.url}
+                    alt={item.title || '검색 이미지'}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(transparent 60%, rgba(0,0,0,0.75) 100%)',
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      padding: '6px 8px'
+                    }}
+                  >
+                    <span
+                      style={{
+                        color: '#ffffff',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        width: '100%'
+                      }}
+                    >
+                      {item.source}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 인스타그램 캐러셀 슬라이드 고해상도 Canvas 2D 이미지 생성 (1080x1350 4:5 기본 규격)
+ * 실제 사진 배경 위에 인스타그램 특유의 스티커와 텍스트 박스를 렌더링합니다.
+ */
+export async function generateCarouselSlideBase64(slide, index, total, carousel, shopName = '월계1동 골목가게') {
+  try {
+    const isPortrait = carousel?.aspectRatio !== '1:1';
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = isPortrait ? 1350 : 1080;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // 1. 실제 사진 배경 100% 채우기 (프록시 경유하여 CORS 방지)
+    const photoUrl = slide.image || 'https://postfiles.pstatic.net/MjAyNDA1MTJfMjMy/MDAxNzE1NTExMDAwMDI3.2HEUC7rXaJYPQnUsvcKrUUeHo5pu2wK55a281Kz4oJYg.CXHEANwKJV4xDvRGZqUiSvdc5iSiq-xivUCRCIcAZ8Yg.JPEG/JK69cGshoFAsVsbH3Wzez4.jpg?type=w966';
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      const proxyUrl = `/api/owner/proxy-image?url=${encodeURIComponent(photoUrl)}`;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = proxyUrl;
+      });
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    } catch {
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // 2. 인스타 감성 비네팅 그라디언트 (상단 & 하단 텍스트 가독성 확보)
+    const topGrad = ctx.createLinearGradient(0, 0, 0, 320);
+    topGrad.addColorStop(0, 'rgba(0, 0, 0, 0.7)');
+    topGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(0, 0, canvas.width, 320);
+
+    const bottomGrad = ctx.createLinearGradient(0, canvas.height - 600, 0, canvas.height);
+    bottomGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    bottomGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.65)');
+    bottomGrad.addColorStop(1, 'rgba(0, 0, 0, 0.92)');
+    ctx.fillStyle = bottomGrad;
+    ctx.fillRect(0, canvas.height - 600, canvas.width, 600);
+
+    // 3. 인스타그램 상단 위치 스티커 (📍 월계1동 · 매장명)
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    ctx.beginPath();
+    ctx.roundRect(60, 60, 480, 56, 28);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`📍 월계1동 · ${shopName}`, 86, 98);
+    ctx.restore();
+
+    // 4. 슬라이드 인디케이터 배지 (예: 1 / 4)
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+    ctx.beginPath();
+    ctx.roundRect(canvas.width - 180, 60, 120, 56, 28);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${index + 1} / ${total}`, canvas.width - 120, 97);
+    ctx.restore();
+
+    // 5. 인스타 블랙 스토리 텍스트 박스 타이틀 & 형광 서브타이틀
+    const textStartY = canvas.height - 480;
+
+    // 배지
+    const badgeText = `✦ ${slide.badge || (slide.type === 'celebrity' ? '화제의 셀럽 추천' : slide.type === 'menu' ? '시그니처 메뉴' : slide.type === 'benefit' ? '특별 혜택' : '골목 핫플')}`;
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.roundRect(60, textStartY - 70, 300, 48, 10);
+    ctx.fill();
+    ctx.fillStyle = '#fde047';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(badgeText, 80, textStartY - 38);
+    ctx.restore();
+
+    // 메인 타이틀 (인스타 블랙 박스 타이포)
+    ctx.save();
+    ctx.fillStyle = '#000000';
+    ctx.font = '900 52px sans-serif';
+    ctx.beginPath();
+    ctx.roundRect(60, textStartY - 10, canvas.width - 120, 90, 14);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText(slide.title || '오늘의 골목 특선', 84, textStartY + 54);
+    ctx.restore();
+
+    // 서브타이틀 (형광 하이라이트 스티커)
+    if (slide.subtitle) {
+      ctx.save();
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.roundRect(60, textStartY + 95, 600, 50, 10);
+      ctx.fill();
+      ctx.fillStyle = '#000000';
+      ctx.font = '900 26px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(slide.subtitle, 80, textStartY + 130);
+      ctx.restore();
+    }
+
+    // 6. 유형별 스티커 콘텐츠
+    if (slide.type === 'celebrity') {
+      // 셀럽 리액션 말풍선 카드 스티커
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.beginPath();
+      ctx.roundRect(60, textStartY + 160, canvas.width - 120, 170, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(60, textStartY + 160, canvas.width - 120, 170);
+
+      ctx.fillStyle = '#b45309';
+      ctx.font = '900 24px sans-serif';
+      ctx.fillText(`⭐ ${slide.celebrityName || '성시경'}의 솔직 먹방 한 줄 평 ✓`, 90, textStartY + 205);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.fillText(`“${slide.quote || '이 집 국물은 진짜입니다. 꼭 드셔보세요!'}”`, 90, textStartY + 255);
+
+      if (slide.body) {
+        ctx.fillStyle = '#64748b';
+        ctx.font = '500 22px sans-serif';
+        ctx.fillText(slide.body, 90, textStartY + 295);
+      }
+      ctx.restore();
+    } else if (slide.highlight) {
+      // 가격/혜택 하이라이트 스티커
+      ctx.save();
+      ctx.fillStyle = '#000000';
+      ctx.beginPath();
+      ctx.roundRect(60, textStartY + 160, canvas.width - 120, 110, 16);
+      ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(60, textStartY + 160, canvas.width - 120, 110);
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = '900 48px sans-serif';
+      ctx.fillText(slide.highlight, 90, textStartY + 235);
+
+      if (slide.body) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.fillText(slide.body, 420, textStartY + 230);
+      }
+      ctx.restore();
+    } else if (slide.body) {
+      // 본문 안내
+      ctx.save();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.beginPath();
+      ctx.roundRect(60, textStartY + 160, canvas.width - 120, 100, 16);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '500 26px sans-serif';
+      ctx.fillText(slide.body, 90, textStartY + 220);
+      ctx.restore();
+    }
+
+    // 7. 하단 스와이프 유도 알약 스티커
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+    ctx.beginPath();
+    ctx.roundRect((canvas.width - 420) / 2, canvas.height - 90, 420, 50, 25);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.font = '900 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`👉 옆으로 넘겨서 확인 (${index + 1}/${total})`, canvas.width / 2, canvas.height - 57);
+    ctx.restore();
+
+    return canvas.toDataURL('image/png');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 인스타그램 공식 피드 스타일 캐러셀 뷰어 & 내보내기 컴포넌트
+ */
+export function InstagramCarouselView({
+  carousel,
+  shopName,
+  editable = false,
+  onEdit,
+  className = ''
+}) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [aspectRatio, setAspectRatio] = useState(carousel?.aspectRatio || '4:5');
+  const [downloading, setDownloading] = useState(false);
+  const [showEditDrawer, setShowEditDrawer] = useState(false);
+
+  if (!carousel || !Array.isArray(carousel.slides) || carousel.slides.length === 0) {
+    return null;
+  }
+
+  const slides = carousel.slides;
+  const currentSlide = slides[activeIndex] || slides[0];
+
+  const updateCurrentSlide = (fields) => {
+    if (!onEdit) return;
+    const newSlides = slides.map((s, i) => (i === activeIndex ? { ...s, ...fields } : s));
+    onEdit({ ...carousel, slides: newSlides });
+  };
+
+  const downloadCurrentSlidePng = async () => {
+    setDownloading(true);
+    try {
+      const b64 = await generateCarouselSlideBase64(currentSlide, activeIndex, slides.length, { ...carousel, aspectRatio }, shopName);
+      if (b64) {
+        const a = document.createElement('a');
+        a.href = b64;
+        a.download = `${shopName || 'wolgye'}_instagram_slide_${activeIndex + 1}.png`;
+        a.click();
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const downloadAllSlidesPng = async () => {
+    setDownloading(true);
+    try {
+      for (let i = 0; i < slides.length; i++) {
+        const b64 = await generateCarouselSlideBase64(slides[i], i, slides.length, { ...carousel, aspectRatio }, shopName);
+        if (b64) {
+          const a = document.createElement('a');
+          a.href = b64;
+          a.download = `${shopName || 'wolgye'}_instagram_slide_${i + 1}.png`;
+          a.click();
+          await new Promise(r => setTimeout(r, 400));
+        }
+      }
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // 슬라이드 유형별 기본 고화질 실사 사진 매핑 (로컬 정적 에셋 기반 100% 보장)
+  const FALLBACK_BY_TYPE = {
+    cover: '/community/restaurant.jpg',
+    menu: '/community/food.jpg',
+    celebrity: 'https://health.chosun.com/site/data/img_dir/2025/09/09/2025090903315_0.webp',
+    benefit: '/community/food.jpg',
+    location: '/community/wolgye/kwangwoon-station.jpg',
+    cta: '/community/wolgye/kwangwoon-station.jpg'
+  };
+
+  // 배경 실사 사진 URL (외부 URL은 브라우저 403 핫링크 차단 방지를 위해 프록시 경유, 로컬 에셋은 직렬 서빙)
+  const rawPhotoUrl = currentSlide.image || FALLBACK_BY_TYPE[currentSlide.type] || FALLBACK_BY_TYPE.cover;
+  const photoUrl = rawPhotoUrl.startsWith('http') && !rawPhotoUrl.includes('/api/owner/proxy-image')
+    ? `/api/owner/proxy-image?url=${encodeURIComponent(rawPhotoUrl)}`
+    : rawPhotoUrl;
+
+  return (
+    <div className={`instagram-feed-card-wrapper ${className}`} style={{ margin: '14px 0' }}>
+      {/* =========================================================================
+          상단 컨트롤 바: 규격 (4:5 인스타 피드 vs 1:1) & PNG 다운로드
+      ========================================================================= */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '8px',
+          marginBottom: '12px',
+          padding: '8px 12px',
+          background: '#f8fafc',
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
+            📸 인스타그램 규격:
+          </span>
+          <button
+            type="button"
+            onClick={() => setAspectRatio('4:5')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: aspectRatio === '4:5' ? '#1b3b11' : '#e2e8f0',
+              color: aspectRatio === '4:5' ? '#d5f260' : '#475569',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            4:5 세로 피드 (추천)
+          </button>
+          <button
+            type="button"
+            onClick={() => setAspectRatio('1:1')}
+            style={{
+              padding: '4px 10px',
+              borderRadius: '6px',
+              border: 'none',
+              background: aspectRatio === '1:1' ? '#1b3b11' : '#e2e8f0',
+              color: aspectRatio === '1:1' ? '#d5f260' : '#475569',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            1:1 정사각형
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {editable && (
+            <button
+              type="button"
+              onClick={() => setShowEditDrawer(!showEditDrawer)}
+              style={{
+                padding: '5px 10px',
+                borderRadius: '8px',
+                border: '1px solid #cbd5e1',
+                background: showEditDrawer ? '#f1f5f9' : '#ffffff',
+                color: '#334155',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              ✏️ 문구 수정
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={downloadCurrentSlidePng}
+            style={{
+              padding: '5px 12px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#0f172a',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            📥 현재 장 받기
+          </button>
+          <button
+            type="button"
+            disabled={downloading}
+            onClick={downloadAllSlidesPng}
+            style={{
+              padding: '5px 12px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#1b3b11',
+              color: '#d5f260',
+              fontSize: '11px',
+              fontWeight: 800,
+              cursor: 'pointer'
+            }}
+          >
+            📥 전 슬라이드 PNG 받기
+          </button>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          실제 인스타그램 피드 포스트 프레임 (외곽 그림자 & 모바일 뷰어)
+      ========================================================================= */}
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: '24px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
+          overflow: 'hidden',
+          maxWidth: '460px',
+          margin: '0 auto',
+          position: 'relative'
+        }}
+      >
+        {/* 1. 인스타그램 공식 상단 프로필 헤더 */}
+        <div
+          style={{
+            padding: '12px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f1f5f9'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  background: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 900,
+                  fontSize: '15px',
+                  color: '#1b3b11'
+                }}
+              >
+                {(shopName || '월')[0]}
+              </div>
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontWeight: 800, fontSize: '13px', color: '#0f172a' }}>
+                  {shopName || '월계1동 골목가게'}
+                </span>
+                <span style={{ color: '#0284c7', fontSize: '12px' }}>✓</span>
+              </div>
+              <span style={{ fontSize: '10px', color: '#64748b' }}>
+                월계1동 · 서울 노원구
+              </span>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '18px', color: '#64748b', cursor: 'pointer' }}>
+            •••
+          </div>
+        </div>
+
+        {/* 2. 메인 사진 뷰포트 (100% 실제 사진 풀블리드 + 인스타그램 스티커 오버레이) */}
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            aspectRatio: aspectRatio === '4:5' ? '4 / 5' : '1 / 1',
+            backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.1) 35%, rgba(0,0,0,0.85) 100%), url(${photoUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '20px 18px',
+            boxSizing: 'border-box',
+            color: '#ffffff'
+          }}
+        >
+          {/* 상단 스티커 영역 (위치 스티커 & 슬라이드 인디케이터) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(255, 255, 255, 0.95)',
+                color: '#0f172a',
+                padding: '4px 12px',
+                borderRadius: '999px',
+                fontSize: '11px',
+                fontWeight: 800,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+                backdropFilter: 'blur(4px)'
+              }}
+            >
+              <span style={{ color: '#ef4444' }}>📍</span>
+              <span>월계1동 · {shopName || '광운대역 골목'}</span>
+            </div>
+
+            <div
+              style={{
+                background: 'rgba(15, 23, 42, 0.8)',
+                color: '#ffffff',
+                borderRadius: '999px',
+                padding: '4px 12px',
+                fontSize: '11px',
+                fontWeight: 800,
+                letterSpacing: '0.04em'
+              }}
+            >
+              {activeIndex + 1} / {slides.length}
+            </div>
+          </div>
+
+          {/* 중앙/하단 스티커 영역 (인스타 스토리 텍스트 박스, 셀럽 리액션, 하이라이트) */}
+          <div style={{ zIndex: 2, margin: 'auto 0 10px' }}>
+            {/* 배지 스티커 */}
+            <div style={{ marginBottom: '8px' }}>
+              <span
+                style={{
+                  background: '#000000',
+                  color: '#fde047',
+                  fontSize: '11px',
+                  fontWeight: 900,
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  display: 'inline-block',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)'
+                }}
+              >
+                ✦ {currentSlide.badge || (currentSlide.type === 'celebrity' ? '화제의 셀럽 추천' : currentSlide.type === 'menu' ? '시그니처 메뉴' : currentSlide.type === 'benefit' ? '특별 혜택' : '골목 핫플')}
+              </span>
+            </div>
+
+            {/* 메인 타이틀 (인스타 블랙 박스 타이포그래피) */}
+            <h2
+              style={{
+                margin: '0 0 8px',
+                fontSize: aspectRatio === '4:5' ? '24px' : '21px',
+                fontWeight: 900,
+                lineHeight: 1.35,
+                color: '#ffffff',
+                wordBreak: 'keep-all'
+              }}
+            >
+              <span
+                style={{
+                  background: 'rgba(0, 0, 0, 0.85)',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  boxDecorationBreak: 'clone',
+                  WebkitBoxDecorationBreak: 'clone',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.4)'
+                }}
+              >
+                {currentSlide.title}
+              </span>
+            </h2>
+
+            {/* 서브타이틀 (형광 옐로우 스티커) */}
+            {currentSlide.subtitle && (
+              <div style={{ marginBottom: '10px' }}>
+                <span
+                  style={{
+                    background: '#fde047',
+                    color: '#000000',
+                    fontSize: '13px',
+                    fontWeight: 900,
+                    padding: '3px 8px',
+                    borderRadius: '4px',
+                    display: 'inline-block',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  {currentSlide.subtitle}
+                </span>
+              </div>
+            )}
+
+            {/* 연예인/인플루언서 리액션 말풍선 카드 */}
+            {currentSlide.type === 'celebrity' && (
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.96)',
+                  color: '#0f172a',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  marginTop: '8px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                  border: '2px solid #fde047'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '14px' }}>⭐</span>
+                  <span style={{ fontSize: '12px', fontWeight: 900, color: '#b45309' }}>
+                    {currentSlide.celebrityName || '성시경'}의 솔직 리액션
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#0284c7' }}>✓</span>
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', lineHeight: 1.4 }}>
+                  “{currentSlide.quote || '이 집 국물은 진짜입니다. 꼭 드셔보세요!'}”
+                </div>
+                {currentSlide.body && (
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    {currentSlide.body}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 메뉴 가격 또는 파격 혜택 하이라이트 스티커 */}
+            {currentSlide.type !== 'celebrity' && currentSlide.highlight && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(0, 0, 0, 0.88)',
+                  padding: '6px 14px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #fde047',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+                  marginTop: '4px'
+                }}
+              >
+                <span style={{ fontSize: '18px', fontWeight: 900, color: '#fde047' }}>
+                  {currentSlide.highlight}
+                </span>
+                {currentSlide.body && (
+                  <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: 700 }}>
+                    {currentSlide.body}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* 일반 본문 설명 */}
+            {currentSlide.type !== 'celebrity' && !currentSlide.highlight && currentSlide.body && (
+              <div
+                style={{
+                  background: 'rgba(0,0,0,0.75)',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  display: 'inline-block',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  lineHeight: 1.4,
+                  marginTop: '4px'
+                }}
+              >
+                {currentSlide.body}
+              </div>
+            )}
+
+            {/* 마지막 장 전용 강력한 CTA 액션 유도 스티커 */}
+            {(currentSlide.type === 'cta' || activeIndex === slides.length - 1) && (
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #fde047 0%, #facc15 100%)',
+                  color: '#0f172a',
+                  borderRadius: '12px',
+                  padding: '10px 14px',
+                  marginTop: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                  border: '1.5px solid #ffffff'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '20px' }}>🔖</span>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 900, color: '#000000' }}>게시물 저장하고 혜택 받기</div>
+                    <div style={{ fontSize: '11px', color: '#713f12', fontWeight: 700 }}>저장한 화면을 사장님께 보여주세요!</div>
+                  </div>
+                </div>
+                <span
+                  style={{
+                    background: '#000000',
+                    color: '#fde047',
+                    padding: '5px 10px',
+                    borderRadius: '8px',
+                    fontSize: '11px',
+                    fontWeight: 900
+                  }}
+                >
+                  저장 필수 ↗️
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* 하단 스와이프 유도 알약 스티커 */}
+          <div
+            style={{
+              alignSelf: 'center',
+              background: activeIndex === slides.length - 1 ? '#fde047' : 'rgba(255, 255, 255, 0.95)',
+              color: activeIndex === slides.length - 1 ? '#000000' : '#0f172a',
+              padding: '5px 14px',
+              borderRadius: '999px',
+              fontSize: '11px',
+              fontWeight: 900,
+              boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+              zIndex: 2
+            }}
+          >
+            {activeIndex === slides.length - 1
+              ? `🎉 마지막 장입니다 · 매장에서 만나요! (${activeIndex + 1}/${slides.length})`
+              : `👉 옆으로 넘겨서 계속 보기 (${activeIndex + 1}/${slides.length})`}
+          </div>
+
+          {/* 슬라이드 좌우 네비게이션 플로팅 화살표 버튼 */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: 0,
+              right: 0,
+              transform: 'translateY(-50%)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '0 10px',
+              pointerEvents: 'none',
+              zIndex: 10
+            }}
+          >
+            <button
+              type="button"
+              disabled={activeIndex === 0}
+              aria-label="이전 슬라이드"
+              onClick={e => {
+                e.stopPropagation();
+                setActiveIndex(i => Math.max(0, i - 1));
+              }}
+              style={{
+                pointerEvents: 'auto',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: activeIndex === 0 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.95)',
+                border: '1.5px solid rgba(0,0,0,0.1)',
+                color: activeIndex === 0 ? 'rgba(255,255,255,0.4)' : '#0f172a',
+                fontWeight: 900,
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: activeIndex === 0 ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                transition: 'transform 0.1s'
+              }}
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              disabled={activeIndex === slides.length - 1}
+              aria-label="다음 슬라이드"
+              onClick={e => {
+                e.stopPropagation();
+                setActiveIndex(i => Math.min(slides.length - 1, i + 1));
+              }}
+              style={{
+                pointerEvents: 'auto',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: activeIndex === slides.length - 1 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.95)',
+                border: '1.5px solid rgba(0,0,0,0.1)',
+                color: activeIndex === slides.length - 1 ? 'rgba(255,255,255,0.4)' : '#0f172a',
+                fontWeight: 900,
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: activeIndex === slides.length - 1 ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                transition: 'transform 0.1s'
+              }}
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        {/* 3. 인스타그램 하단 피드 액션 바 & 캡션 */}
+        <div style={{ padding: '12px 16px', background: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', gap: '14px', fontSize: '18px', cursor: 'pointer' }}>
+              <span>❤️</span>
+              <span>💬</span>
+              <span>↗️</span>
+            </div>
+
+            {/* 도트 인디케이터 */}
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveIndex(idx)}
+                  style={{
+                    width: idx === activeIndex ? '18px' : '6px',
+                    height: '6px',
+                    borderRadius: '999px',
+                    border: 'none',
+                    background: idx === activeIndex ? '#0284c7' : '#cbd5e1',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    padding: 0
+                  }}
+                />
+              ))}
+            </div>
+
+            <div style={{ fontSize: '18px', cursor: 'pointer' }}>
+              <span>🔖</span>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
+            좋아요 <b>486개</b>
+          </div>
+
+          <div style={{ fontSize: '12px', color: '#1e293b', lineHeight: 1.45 }}>
+            <b>{shopName || '월계밥상'}</b> {currentSlide.title} {currentSlide.subtitle || ''}
+            <div style={{ color: '#0284c7', fontSize: '11px', marginTop: '4px' }}>
+              #월계동맛집 #광운대맛집 #먹스타그램 #성시경먹방 #월계밥상
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. 수정 서랍 (선택 시 열림) */}
+      {editable && showEditDrawer && (
+        <div
+          style={{
+            maxWidth: '460px',
+            margin: '12px auto 0',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '16px',
+            padding: '14px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.03)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
+              ✏️ {activeIndex + 1}번 슬라이드 문구 수정
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowEditDrawer(false)}
+              style={{ background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}
+            >
+              닫기 ✕
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gap: '8px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                제목
+              </label>
+              <input
+                type="text"
+                value={currentSlide.title || ''}
+                onChange={e => updateCurrentSlide({ title: e.target.value })}
+                style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                부제목 / 카피
+              </label>
+              <input
+                type="text"
+                value={currentSlide.subtitle || ''}
+                onChange={e => updateCurrentSlide({ subtitle: e.target.value })}
+                style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}
+              />
+            </div>
+            {currentSlide.type === 'celebrity' && (
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '2px' }}>
+                  연예인 추천 문구
+                </label>
+                <input
+                  type="text"
+                  value={currentSlide.quote || ''}
+                  onChange={e => updateCurrentSlide({ quote: e.target.value })}
+                  style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px', boxSizing: 'border-box' }}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
