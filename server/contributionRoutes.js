@@ -34,7 +34,9 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
   async function save(req,res){
     try{
       const b=req.body||{};
-      const p={placeId:clean(b.placeId,100),title:clean(b.title,70),body:clean(b.body,2000),author:clean(req.user?.user_metadata?.nickname||b.author,30),type:clean(b.type,30),observedAt:clean(b.observedAt,10),image:typeof b.image==='string'?b.image:''};
+      const keywords=Array.isArray(b.keywords)?b.keywords:[];
+      if(keywords.length>8||keywords.some(v=>typeof v!=='string'||!v.trim()||v.length>24))return res.status(400).json({error:'키워드는 최대 8개, 각각 24자 이하로 입력해 주세요.'});
+      const p={keywords:[...new Set(keywords.map(v=>v.trim().replace(/^#+/,'')))].filter(Boolean),placeId:clean(b.placeId,100),title:clean(b.title,70),body:clean(b.body,2000),author:clean(req.user?.user_metadata?.nickname||b.author,30),type:clean(b.type,30),observedAt:clean(b.observedAt,10),image:typeof b.image==='string'?b.image:''};
       if(!p.title||!p.body||!p.author||!['방문 이야기','메뉴·가격','영업 소식','새로운 발견'].includes(p.type))return res.status(400).json({error:'제목·내용·작성자·소식 종류를 확인해 주세요.'});
       if(!validDate(p.observedAt))return res.status(400).json({error:'실제로 확인한 날짜를 오늘 이전으로 입력해 주세요.'});
       if(p.image){

@@ -2,6 +2,8 @@ import {retrieveCommunity} from './communityRetrieval.js';
 import {chatJSON} from './llm.js';
 import {communityStore} from './communityStore.js';
 import {infoReports,publicInfo} from './placeInfo.js';
+import {mergeSupplementalPlaces} from './supplementalPlaces.js';
+import {ownerMarketingStore} from './ownerMarketingStore.js';
 import fs from 'node:fs';
 const boundary = JSON.parse(fs.readFileSync(new URL('../../src/community/wolgye1-boundary.json', import.meta.url), 'utf8'));
 function inRing(x,y,ring) {
@@ -16,29 +18,68 @@ export function inDistrict(lat,lng) {
   return Number.isFinite(lat)&&Number.isFinite(lng)&&boundary.geometry.coordinates.some(r=>inRing(lng,lat,r[0])&&!r.slice(1).some(h=>inRing(lng,lat,h)));
 }
 let cache=null, pending=null;
+const boundaryPoints=boundary.geometry.coordinates.flatMap(polygon=>polygon.flatMap(ring=>ring));
+const bounds={
+  west:Math.min(...boundaryPoints.map(([lng])=>lng)),
+  south:Math.min(...boundaryPoints.map(([,lat])=>lat)),
+  east:Math.max(...boundaryPoints.map(([lng])=>lng)),
+  north:Math.max(...boundaryPoints.map(([,lat])=>lat))
+};
+async function searchCategoryPage(key, category, rect, page) {
+  const url=new URL('https://dapi.kakao.com/v2/local/search/category.json');
+  Object.entries({category_group_code:category,rect:`${rect.west},${rect.south},${rect.east},${rect.north}`,size:15,page}).forEach(([k,v])=>url.searchParams.set(k,v));
+  for(let attempt=0;attempt<3;attempt++) {
+    try {
+      const response=await fetch(url,{headers:{Authorization:`KakaoAK ${key}`},signal:AbortSignal.timeout(15000)});
+      if(!response.ok) {
+        if(response.status!==429&&response.status<500) throw new Error(`카카오 장소 조회에 실패했어요 (${response.status}).`);
+        throw new TypeError(`카카오 장소 조회가 지연되고 있어요 (${response.status}).`);
+      }
+      return response.json();
+    }catch(error){
+      if(attempt===2||!(error instanceof TypeError||error.name==='TimeoutError')) throw error;
+      await new Promise(resolve=>setTimeout(resolve,250*(attempt+1)));
+    }
+  }
+}
+async function searchCategoryArea(key, category, rect, depth=0) {
+  const first=await searchCategoryPage(key,category,rect,1);
+  // Kakao exposes at most 45 results for one search area, even when total_count is larger.
+  if(first.meta?.total_count>45) {
+    if(depth>=8) throw new Error('이 구역의 가게 수가 장소 검색 한도를 초과했어요. 잠시 후 다시 시도해 주세요.');
+    const midLng=(rect.west+rect.east)/2,midLat=(rect.south+rect.north)/2;
+    const parts=[
+      {west:rect.west,south:rect.south,east:midLng,north:midLat},
+      {west:midLng,south:rect.south,east:rect.east,north:midLat},
+      {west:rect.west,south:midLat,east:midLng,north:rect.north},
+      {west:midLng,south:midLat,east:rect.east,north:rect.north}
+    ];
+    return (await Promise.all(parts.map(part=>searchCategoryArea(key,category,part,depth+1)))).flat();
+  }
+  const documents=[...(first.documents||[])];
+  const lastPage=Math.min(3,Math.ceil((first.meta?.pageable_count||first.meta?.total_count||documents.length)/15));
+  for(let page=2;page<=lastPage;page+=5) {
+    const batch=await Promise.all(Array.from({length:Math.min(5,lastPage-page+1)},(_,i)=>searchCategoryPage(key,category,rect,page+i)));
+    batch.forEach(data=>documents.push(...(data.documents||[])));
+  }
+  return documents;
+}
 async function getBasePlaces() {
-  if(cache && Date.now()-cache.at<300000) return cache.data;
+  if(cache && Date.now()-cache.at<1800000) return cache.data;
   if(pending) return pending;
   pending=(async()=>{
     const key=process.env.KAKAO_REST_API_KEY;
     if(!key) throw new Error('카카오 검색 키가 설정되지 않았어요.');
     const found=new Map();
     for(const category of ['FD6','CE7']) {
-      for(let page=1;page<=3;page++) {
-        const url=new URL('https://dapi.kakao.com/v2/local/search/category.json');
-        Object.entries({category_group_code:category,x:127.0583,y:37.6193,radius:2200,sort:'distance',size:15,page}).forEach(([k,v])=>url.searchParams.set(k,v));
-        const response=await fetch(url,{headers:{Authorization:`KakaoAK ${key}`},signal:AbortSignal.timeout(15000)});
-        if(!response.ok) throw new Error(`카카오 장소 조회에 실패했어요 (${response.status}).`);
-        const data=await response.json();
-        for(const p of data.documents||[]) {
+      const documents=await searchCategoryArea(key,category,bounds);
+      for(const p of documents) {
           const lat=Number(p.y),lng=Number(p.x);
           if(!inDistrict(lat,lng)) continue;
           found.set(p.id,{id:`kakao-${p.id}`,name:p.place_name,kind:p.category_name.split('>').pop().trim(),category:p.category_name,address:p.road_address_name||p.address_name,phone:p.phone||null,lat,lng,placeUrl:`https://place.map.kakao.com/${p.id}`,price:null,menu:null,image:null,source:'카카오 Local',retrievedAt:new Date().toISOString()});
-        }
-        if(data.meta?.is_end) break;
       }
     }
-    const data={items:[...found.values()],source:'카카오 Local',retrievedAt:new Date().toISOString(),notice:'카카오 검색 결과 중 월계1동 경계 안의 음식점·카페입니다. 전체 가게 목록이나 현재 영업 여부를 보장하지 않아요.'};
+    const data={items:[...found.values()],source:'카카오 Local',retrievedAt:new Date().toISOString(),notice:'카카오 장소 검색 API에서 조회 가능한 월계1동 경계 안의 음식점·카페입니다. 카카오맵 전체 등록 가게나 현재 영업 여부를 보장하지 않아요.'};
     cache={at:Date.now(),data};return data;
   })();
   try{return await pending;}finally{pending=null;}
@@ -46,8 +87,8 @@ async function getBasePlaces() {
 
 export async function getCommunityPlaces() {
   const data=await getBasePlaces();
-  const posts=await communityStore.posts(),infos=await communityStore.placeInfo();
-  return {...data,items:[...await communityStore.places(),...data.items].map(p=>({...p,info:publicInfo(infos[p.id]),reports:[...infoReports(infos[p.id]),...posts.filter(n=>n.placeId===p.id).map(({id,body,type,observedAt})=>({id,body,type,observedAt}))].sort((a,b)=>b.observedAt.localeCompare(a.observedAt))}))};
+  const posts=await communityStore.posts(),infos=await communityStore.placeInfo(),ownerKeywords=await ownerMarketingStore.keywordMap();
+  return {...data,items:mergeSupplementalPlaces([...await communityStore.places(),...data.items]).map(p=>({...p,ownerKeywords:ownerKeywords[p.id]||[],info:publicInfo(infos[p.id]),reports:[...infoReports(infos[p.id]),...posts.filter(n=>n.placeId===p.id).map(({id,body,type,observedAt})=>({id,body,type,observedAt}))].sort((a,b)=>b.observedAt.localeCompare(a.observedAt))}))};
 }
 
 export function validateRecommendation(value, places, message='') {

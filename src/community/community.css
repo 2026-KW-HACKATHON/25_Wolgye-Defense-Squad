@@ -268,3 +268,75 @@
 .contrib-pill .ring b{width:26px;height:26px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:12px}
 @media(max-width:760px){.contrib-pill{font-size:12px;border-radius:18px}}
 .all-note{margin:4px 0 0!important}.discovery-filters{margin-top:22px}
+
+/* 찾기 탐색 (chim 브랜치에서 옮김, iOS 톤으로 조정) */
+.community .find-heading{flex-wrap:wrap}
+.community .find-list-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
+.community .place-sort-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.community .place-sort-label select{border:0;border-radius:999px;background:#7676801f;color:var(--ink);padding:7px 12px;font-size:13px;font-weight:600}
+.community .place-browse-note,.community .place-results-count{font-size:13px;color:var(--muted);margin:-8px 0 16px}
+.community .recommendation-answer{white-space:pre-line;margin:18px 0;color:#345447;line-height:1.75;background:#fff;border-radius:18px;padding:16px 18px;box-shadow:0 1px 2px #0000000a}
+.community .place-name-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.community .place-name-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:14px 16px!important;border-radius:14px;background:#fff!important;text-align:left;font-weight:700;color:var(--ink);box-shadow:0 1px 2px #0000000a}
+.community .place-name-row span{overflow-wrap:anywhere;display:grid}.community .place-name-row small{font-weight:500;color:var(--muted);font-size:12px}
+.community .place-name-row svg{flex-shrink:0}
+.community .real-place-cover{position:relative;overflow:hidden}
+.community .place-cover-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.community .real-place-cover .place-photo-source{position:absolute;bottom:10px;left:10px;padding:3px 8px;border-radius:999px;background:#173d32d9;color:#fff;font-size:11px}
+@media(max-width:760px){.community .find-list-controls{justify-content:flex-start}.community .place-name-list{grid-template-columns:1fr}}
+
+/* 키워드 태그 (chim 브랜치에서 옮김) */
+.community .place-keywords{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:10px 0}
+.community .place-keywords small{width:100%;font-size:11px;color:var(--muted)}
+.community .place-keywords span{padding:4px 10px;border-radius:999px;background:#eef6d6;font-size:12px;color:var(--ink);font-weight:600}
+
+/* 모임 투표 마무리 (chim 브랜치에서 옮김, iOS 톤으로 조정) */
+.community .group-vote-stage,.community .group-vote-results{margin-top:24px;padding:22px;border-radius:20px;background:#fff;box-shadow:0 1px 2px #0000000a,0 4px 16px #00000008}
+.community .group-vote-stage h3,.community .group-vote-results h3{margin-bottom:8px}
+.community .group-vote-stage p,.community .group-vote-results>p{font-size:13px;color:#52655c;margin-bottom:14px}
+.community .group-result-row{display:flex;justify-content:space-between;gap:15px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+.community .group-final-actions{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}
+.community .group-final-actions p{width:100%;font-size:12px}
+.community .group-final-result{margin-top:22px;padding:24px;border-radius:20px;background:linear-gradient(140deg,#f4ffc9,#d5f65b);animation:sheetIn .5s cubic-bezier(.2,.9,.25,1.05) both}
+.community .group-final-result h2{margin:10px 0}
+.community .group-final-result p{margin-bottom:10px}
+.community .group-final-result small{display:block;margin-bottom:15px}
+.community .group-roulette{display:grid;place-items:center;gap:14px;margin:20px auto}
+.community .group-roulette-wheel{width:120px;height:120px;border:7px solid white;border-radius:50%;background:conic-gradient(#d5f65b 0 120deg,#a9d5bb 120deg 240deg,#f1d898 240deg 360deg);box-shadow:0 4px 18px #173d3233;animation:group-wheel-spin .45s linear infinite}
+@keyframes group-wheel-spin{to{transform:rotate(360deg)}}
+
+/* 둥근 드롭다운 */
+.pill-select{position:relative}
+.pill-select-button{display:inline-flex!important;align-items:center;gap:6px;border-radius:999px!important;background:#7676801f!important;color:var(--ink)!important;padding:7px 12px 7px 14px!important;font-size:13px!important;font-weight:700;transition:background .2s}
+.pill-select-button:hover{background:#76768029!important}
+.pill-select-button svg{transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.pill-select.open .pill-select-button svg{transform:rotate(180deg)}
+.pill-select-menu{position:absolute;z-index:40;top:calc(100% + 8px);left:0;min-width:160px;max-height:320px;overflow:auto;margin:0;padding:6px;list-style:none;background:#fffffff2;backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);border-radius:18px;box-shadow:0 0 0 1px #0000000d,0 12px 32px #173d3226;transform-origin:top left;animation:menuIn .22s cubic-bezier(.2,.9,.25,1.1) both}
+.pill-select-menu li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:12px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap}
+.pill-select-menu li.active{background:#7676801a}
+.pill-select-menu li.selected{background:var(--lime)}
+@keyframes menuIn{from{opacity:0;transform:scale(.92) translateY(-6px)}to{opacity:1;transform:none}}
+/* 아이폰 분할 버튼: 회색 바탕 위 선택된 쪽만 흰 알약 */
+.community .segmented{display:inline-flex;gap:2px;padding:3px;border:0!important;border-radius:999px;background:#7676801f}
+.community .segmented button{border-radius:999px!important;padding:6px 14px!important;font-size:13px;font-weight:600;color:var(--ink);background:transparent!important;transition:background .25s,box-shadow .25s}
+.community .segmented button.active{background:#fff!important;color:var(--ink)!important;box-shadow:0 1px 2px #0000001f,0 3px 8px #0000000f}
+@media(prefers-reduced-motion:reduce){.pill-select-menu{animation:none}}
+/* 드롭다운 메뉴 크기를 버튼에 맞춤 (스크롤 없이, 같은 글씨 크기) */
+.pill-select-menu{min-width:100%;width:max-content;max-height:none;overflow:visible;padding:4px;border-radius:16px;top:calc(100% + 6px)}
+.pill-select-menu li{padding:6px 10px;gap:10px;border-radius:11px;font-size:13px;font-weight:600;line-height:1.4}
+.pill-select-menu li svg{width:14px;height:14px}
+
+/* 버튼 폭 = 가장 긴 항목, 메뉴와 같은 폭·글씨 크기 */
+.pill-select-label{display:inline-grid;text-align:left}
+.pill-select-label>span{grid-area:1/1}
+.pill-select-label>.ghost{visibility:hidden}
+.pill-select-button{padding:8px 12px 8px 16px!important;font-size:14px!important;gap:10px}
+.pill-select.open .pill-select-button{outline:none!important}
+.pill-select-menu{width:100%;min-width:0}
+.pill-select-menu li{font-size:14px;padding:7px 10px 7px 12px}
+/* 찾기 입력창: 안쪽 여백을 주고, 누르면 칸 테두리 대신 카드 전체에 연두 빛을 준다 */
+.search-panel{padding:26px 28px 20px!important;transition:box-shadow .25s}
+.search-panel textarea{display:block;width:100%;padding:4px 2px!important;font-size:18px;line-height:1.6;min-height:96px;resize:none;background:transparent;outline:none!important}
+.search-panel textarea::placeholder{color:#a5a8ad}
+.search-panel:focus-within{box-shadow:0 0 0 3px #d5f65b,0 6px 20px #173d3214!important}
+@media(max-width:760px){.search-panel{padding:20px 20px 16px!important}.search-panel textarea{font-size:16px;min-height:84px}}
