@@ -8,16 +8,26 @@ export function RoleBadge({role}){
  return role==='owner'?<span className="role-badge owner">사장님</span>:role==='internet'?<span className="role-badge internet">인터넷</span>:<span className="role-badge">이웃</span>;
 }
 
+function MenuTable({value}){
+ const [expanded,setExpanded]=useState(false);
+ const rows=String(value).split(/\r?\n|\s+\/\s+/).map(x=>x.trim()).filter(Boolean).map(text=>{
+  const match=text.match(/^(.*?)\s+((?:\d{1,3}(?:,\d{3})+|\d+)\s*원)$/);
+  // Only an unambiguous single price becomes a price cell; retain other text verbatim.
+  return match&&!/[0-9]\s*원/.test(match[1])?{name:match[1],price:match[2]}:{name:text,price:'가격 확인 필요'};
+ });
+ return <div className="menu-board"><table><caption className="sr-only">메뉴와 가격</caption><thead><tr><th scope="col">메뉴</th><th scope="col">가격</th></tr></thead><tbody>{(expanded?rows:rows.slice(0,5)).map((row,i)=><tr key={i}><td>{row.name}</td><td>{row.price}</td></tr>)}</tbody></table>{rows.length>5&&<button className="text-link" aria-expanded={expanded} onClick={()=>setExpanded(!expanded)}>{expanded?'메뉴 접기':`메뉴 전체 보기 (${rows.length}개)`}</button>}</div>;
+}
+
 export function PlaceInfoView({place,onEdit}){
  const fields=place.info?.fields||{},history=place.info?.history||[];
  return <section className="place-info">
-  <div className="row"><h3>가게 정보</h3><button className="text-link" onClick={onEdit}>가게 정보 수정</button></div>
+  <h3>가게 정보</h3>
   <div className="fact-list">
    <div><span>주소</span><b>{place.address}</b></div>
    <div><span>전화</span><b>{place.phone||'등록 정보 없음'}</b></div>
-   {INFO_FIELDS.map(([key,label])=>{const f=fields[key];return <div key={key}><span>{label}</span>{f?<b className="info-value">{f.value}<small><RoleBadge role={f.role}/> {f.role==='internet'?<>{f.observedAt} 블로그 메뉴판 기준 · 지금과 다를 수 있어요{f.sourceUrl&&<> · <a href={f.sourceUrl} target="_blank" rel="noreferrer">출처</a></>}</>:<>{f.author} · {f.observedAt} 확인{f.role!=='owner'&&' · 사장님 확인 전'}</>}</small></b>:<b className="unknown">아직 정보가 없어요</b>}</div>;})}
+   {INFO_FIELDS.map(([key,label])=>{const f=fields[key];return <div key={key} className={key==='menu'?'menu-info-row':''}><span>{label}</span>{f?<div className="info-value">{key==='menu'?<MenuTable key={f.value} value={f.value}/>:f.value}<small><RoleBadge role={f.role}/> {f.role==='internet'?<>{f.observedAt} 블로그 메뉴판 기준 · 지금과 다를 수 있어요{f.sourceUrl&&<> · <a href={f.sourceUrl} target="_blank" rel="noreferrer">출처</a></>}</>:<>{f.author} · {f.observedAt} 확인{f.role!=='owner'&&' · 사장님 확인 전'}</>}</small></div>:<b className="unknown">아직 정보가 없어요</b>}</div>;})}
   </div>
-  {!!history.length&&<details className="recommendation-info"><summary>수정 기록 ({history.length})</summary>{history.map((h,i)=><article className="place-update" key={i}><b>{INFO_FIELDS.find(f=>f[0]===h.field)?.[1]||h.field}</b><p>{h.before||'(없음)'} → {h.after||'(삭제)'}</p><small><RoleBadge role={h.role}/> {h.author} · {h.observedAt} 확인</small></article>)}</details>}
+  {!!history.length&&<details className="recommendation-info"><summary>최근 수정 기록 ({Math.min(2,history.length)})</summary>{history.slice(0,2).map((h,i)=><article className="place-update" key={i}><b>{INFO_FIELDS.find(f=>f[0]===h.field)?.[1]||h.field}</b><p>{h.before||'(없음)'} → {h.after||'(삭제)'}</p><small><RoleBadge role={h.role}/> {h.author} · {h.observedAt} 확인</small></article>)}</details>}
  </section>;
 }
 
