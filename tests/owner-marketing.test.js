@@ -28,5 +28,14 @@ test('approval gates owner access, campaigns, and reports',()=>{
   assert.equal(store.report('shop-2').totalViews,0);
   store.logout(token);
   assert.equal(store.session(token),undefined);
+  const quick=store.enter('shop-mvp');
+  assert.equal(quick.placeId,'shop-mvp');
+  assert.equal(store.session(quick.token).placeId,'shop-mvp');
+  store.saveCampaign('shop-mvp',{title:'MVP 이벤트',body:'혜택',card:{theme:'lime',badge:'점심특선',benefit:'음료 1캔 무료'},image:'data:image/png;base64,sample',status:'published'});
+  const allPub=store.allPublicCampaigns();
+  const pubItem=allPub.find(c=>c.placeId==='shop-mvp');
+  assert.equal(pubItem?.card?.badge,'점심특선');
+  assert.equal(pubItem?.image,'data:image/png;base64,sample');
+  store.logout(quick.token);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });

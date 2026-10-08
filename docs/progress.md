@@ -206,3 +206,51 @@
 - 사용자 요청으로 feat/midterm-community-demo 변경을 커밋/푸시. 공동 모임·새 장소·공유 소식·발견·음성·디스코드 봇 코드와 테스트/안내 포함. main 변경 없음.
 - 테스트13개 통과, git diff 검사 및 실제 .env 비밀값과 업로드 대상 대조 일치 없음. .env/로컬 데이터/봇 참가 토큰/로컬 도구/PPT 제외 확인.
 - 기존 공유 주소 DNS 만료로 HTTP/2 새 터널 발급. https://ccd-correlation-climbing-jack.trycloudflare.com 에서 앱 화면·가게 API HTTP200 및 제목 확인. Vercel 배포 완료로 표기하지 않음.
+
+## 2026-10-08 — 사장님 마케팅 홍보 자동 게시 및 비주얼 디자인 카드 구현
+- 사용자 요구사항 반영:
+  1. 원클릭 홍보글 자동 게시 기능 구현 (`POST /api/owner/quick-publish`).
+  2. 홍보글 노출 위치: 소식 탭 상단 배너(특정 매장 우선 노출 갈등 방지) 제외, **각 가게 카드(`PlaceCard`) 및 가게 상세 페이지(`modal.type === 'place'`)에 직접 노출**.
+  3. 대화형 콘텐츠 보완: AI 대화창에서 질문과 피드백을 통해 문안 및 카드를 계속 수정하고 즉시 자동 게시 연동.
+  4. 이미지 품질 한계 극복: 단순 AI 생성 이미지의 한글 깨짐 및 레이아웃 어색함을 개선하기 위해 디자인 툴 결합 (`PromoCardCanvas.jsx`). 5개 테마(warm, lime, dark, retro, pastel), 혜택/할인 강조 타이포그래피, 실시간 뱃지/테마 퀵 에디터 및 Canvas 고해상도 이미지 합성 내장.
+- 구현 및 검증 결과:
+  - `server/services/ownerMarketingStore.js`: `allPublicCampaigns()` 및 `card`/`image` 수용.
+  - `server/ownerMarketingRoutes.js`: `/public-campaigns`, `/quick-publish`, `/chat` 디자인 카드 자동 생성 프롬프트 및 추출기 탑재.
+  - `src/community/OwnerMarketing.jsx`: AI 대화 피드백 반영, PromoCardCanvas 렌더링 및 `[🚀 우리 가게 소식으로 즉시 자동 게시]` 원클릭 버튼 연동.
+  - `src/community/CommunityApp.jsx`: `PlaceCard`에 사장님 공식 혜택 뱃지 및 사진 노출, 가게 상세 모달 상단에 사장님 최신 홍보 카드 전면 배치.
+  - `npm test` 14개 테스트 전체 패스, Vite 프론트엔드 프로덕션 빌드 성공, 로컬 개발 서버(포트 3001/5173) 구동 및 E2E API 호출 검증 완료.
+
+## 2026-10-08 — 포스터 그래픽 엔진 및 타이포그래피 고도화
+- 사용자 피드백: "홍보 콘텐츠 이미지가 여전히 너무 단순해. 포스터 만들듯이 만들어줘야 됨. 여러 콘텐츠 문구 요청을 분석하고 문제점을 개선할 것."
+- 다중 프롬프트 테스트 분석:
+  - 5가지 실제 매장 케이스(우천 전/막걸리 할인, 대학생 시험기간 응원, 점심 특선 타임세일, 카페 신메뉴 세트, 불금 심야 맥주 1+1) 실행 및 분석.
+  - 기존 문제점: 단순한 단색 그라디언트 박스 형태, 대형 혜택 숫자 부재(시선 집중 불가), 감성 서브카피 및 행사 일정 분리 부재, 포스터 레이아웃 템플릿(칠판, 매거진, 네온, 티켓 등) 부재, 상업용 포스터 수준의 Canvas 해상도 미흡.
+- 개선 사항 구현:
+  1. 포스터 스키마 확장: `layout`, `heroMetric`, `catchphrase`, `period`, `stamp`, `theme` 구조 탑재.
+  2. 5대 전문 포스터 템플릿 레이아웃 탑재:
+     - ⚡ 볼드 임팩트 (`bold-impact`): 대형 혜택 수치(80px) 중앙 입체 배치, 압도적 시각 후킹.
+     - ✏️ 빈티지 칠판 (`retro-chalkboard`): 분식/고깃집/포차 감성의 초크보드 테두리 및 손글씨 무드.
+     - 📰 감성 매거진 (`magazine-editorial`): 감각적인 카페/다이닝 브루탈리즘 매거진 레이아웃.
+     - 🌙 심야 네온 (`neon-night`): 늦은 밤 펍/주점/타임세일 특화 네온 사인 발광 효과.
+     - 🎟️ 티켓 쿠폰 (`ticket-coupon`): 펀칭 홈과 점선 절취선, 바코드가 포함된 쿠폰 바우처 형태.
+  3. 실시간 포스터 디자인 스튜디오 툴바: 템플릿 즉시 교체, 7종 컬러 테마, 빈티지 도장 스탬프(★ 사장님 쏜다, HOT, LIMITED 등), 세로 포스터/가로 카드 뷰 전환.
+  4. 800 x 1060 px 고해상도 세로형 상업용 포스터 Canvas 2D 합성기 (`generatePromoImageBase64`) 전면 재작성.
+- 테스트 및 검증: `tests/poster-templates.test.js` 신규 작성 및 15개 전체 테스트 패스, 빌드 및 E2E 저장/노출 검증 완료.
+
+## 2026-10-08 — '콘텐츠 제안 검토' 탭 포스터 생성 기능 전면 개편
+- 사용자 요청: "'AI홍보대화' 말고, '콘텐츠 제안 검토'에서 포스터를 만들 수는 없어? 지금 계속 너무 단순 음식 사진과 배경만 나와서 이상해"
+- 원인 파악:
+  - 기존 `POST /api/owner/proposals`는 DALL-E로 "텍스트 없는 음식 분위기 사진"만 호출하고, 텍스트는 단순 줄글(`copy`)로 분리하여 렌더링하고 있어 포스터가 아닌 밋밋한 음식 사진 한 장만 노출되었음.
+- 개선 사항:
+  1. `POST /api/owner/proposals` 고도화:
+     - 사장님 요청 문구(`brief`)를 기반으로 전문 포스터 구조체(`card`: layout, heroMetric, title, benefit, catchphrase, period, stamp)와 DALL-E 고화질 음식 분위기 이미지를 병렬 생성.
+     - 생성된 음식 사진을 `card.bgImage`로 완벽 결합.
+  2. `PromoCardCanvas.jsx` 배경 이미지 오버레이 지원:
+     - 감성 음식 사진이 포스터 뒷배경에 부드러운 다크 그라디언트 오버레이와 함께 깔리고, 그 위에 볼드 타이포그래피, 대형 혜택 수치, 스탬프 도장이 올라가 진짜 완성된 상업용 포스터로 합성 렌더링.
+  3. '콘텐츠 제안 검토' UI 전면 개편 (`OwnerMarketing.jsx`):
+     - 단순 사진/줄글 대신 완성된 인터랙티브 포스터 뷰 제공.
+     - 검토 화면에서 사장님이 5종 포스터 템플릿/테마를 실시간 툴바로 즉시 다듬고 수정할 수 있도록 연동 (`updateProposalCard`).
+     - **`[🚀 이 포스터로 우리 가게 소식 즉시 자동 게시]`** 원클릭 버튼 및 **`[내용 확인 후 승인 (캠페인 연결)]`** 버튼 제공.
+- 테스트 및 검증:
+  - `tests/poster-proposals.test.js` 단위 테스트 작성 및 총 16개 테스트 전체 통과.
+  - `POST /api/owner/proposals` 실제 호출 E2E 검증 통과 (`Has Image: true`, `heroMetric: "20% OFF"`, `layout: "retro-chalkboard"` 정상 합성 확인).

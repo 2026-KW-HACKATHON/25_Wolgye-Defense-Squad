@@ -20,8 +20,8 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({limit:'8mb'}));
-app.use('/api/community', createContributionRouter());
 app.use('/api/community', communityRoutes);
+app.use('/api/community', createContributionRouter());
 app.use('/api/groups', createGroupRouter());
 app.use('/api/owner', createOwnerMarketingRouter());
 
