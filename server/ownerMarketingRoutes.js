@@ -163,100 +163,116 @@ ${CAROUSEL_GUIDE}`;
   router.get('/campaigns/:placeId/:id/image',async(req,res)=>{const c=(await store.publicCampaigns(req.params.placeId)).find(x=>x.id===req.params.id),p=(await store.proposals(req.params.placeId)).find(x=>x.id===c?.proposalId&&x.status==='approved');if(!p?.image)return res.status(404).end();res.type('png').send(Buffer.from(p.image,'base64'));});
   router.patch('/proposals/:id',owner,async(req,res)=>{const status=req.body?.status,card=req.body?.card===undefined?undefined:cleanCard(req.body.card),carousel=req.body?.carousel===undefined?undefined:cleanCarousel(req.body.carousel);if(status!==undefined&&!['approved','rejected'].includes(status))return res.status(400).json({error:'검토 상태가 올바르지 않아요.'});if(req.body?.card!==undefined&&!card&&!carousel)return res.status(400).json({error:'포스터나 캐러셀 내용을 확인해 주세요.'});const row=(await store.reviewProposal(req.owner.placeId,req.params.id,status,card||carousel));if(!row)return res.status(404).json({error:'제안을 찾지 못했어요.'});res.json({id:row.id,status:row.status,card:row.card,carousel:row.carousel});});
 
-  // AI 홍보 대화 및 실시간 수정: 대화 내역을 바탕으로 즉시 캐러셀/포스터 기획 및 웹 이미지 검색 결합
-  router.post('/chat',owner,limit(20),async(req,res)=>{const message=clean(req.body?.message,1000),currentVisual=req.body?.currentVisual||null,history=Array.isArray(req.body?.history)?req.body.history.slice(-8).filter(x=>['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,1000)})):[];if(!message)return res.status(400).json({error:'대화 내용을 입력해 주세요.'});try{
-    const place=(await getCommunityPlaces()).items.find(p=>p.id===req.owner.placeId);
-    const wantsPoster=/(포스터|단일\s*포스터|할인\s*포스터|포스터로|포스터\s*만들)/i.test(message) || (currentVisual?.type==='card' && !/(캐러셀|카드뉴스|슬라이드)/i.test(message));
-    
-    let contextNotice='';
-    if(currentVisual?.data){
-      contextNotice=`\n[현재 작업 중인 비주얼]\n유형: ${currentVisual.type==='carousel'?'인스타그램 캐러셀 카드뉴스':'단일 포스터'}\n현재 데이터: ${JSON.stringify(currentVisual.data)}\n사장님의 이번 메시지는 위 데이터에 대한 수정(연예인 변경, 문구 수정, 할인율 변경 등) 또는 새로운 요청입니다. 사장님의 수정 사항을 정확히 반영하여 변경된 전체 JSON을 제공하세요.\n`;
-    }
+  // 1. 가벼운 실시간 마케팅 대화 (Fast Conversational Ideation): 1~2초 내 즉각 응답, 사장님 고민 상담 및 카피 뼈대 수립
+  router.post('/chat',owner,limit(30),async(req,res)=>{
+    const message=clean(req.body?.message,1000);
+    const history=Array.isArray(req.body?.history)?req.body.history.slice(-10).filter(x=>['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,1000)})):[];
+    if(!message)return res.status(400).json({error:'대화 내용을 입력해 주세요.'});
+    try{
+      const place=(await getCommunityPlaces()).items.find(p=>p.id===req.owner.placeId);
+      const system=`당신은 월계1동 골목 식당 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 친절하고 유능한 1:1 전담 AI 마케팅 파트너입니다.
+[역할 및 지침]
+- 사장님이 홍보 고민, 할인 이벤트, 특정 메뉴, 연예인 추천(예: 카리나, 뉴진스, 아이유, 성시경 등)을 이야기하면, 다정하고 명쾌한 마케팅 조언과 함께 핵심 카피 아이디어를 2~4문장으로 제안하세요.
+- 절대 JSON이나 기술적인 코드를 출력하지 말고, 자연스러운 한국어 대화체로 답변하세요.
+- 사장님과의 대화를 통해 이벤트 내용(혜택, 메뉴, 타깃, 콘셉트)의 틀이 잡히면, "사장님, 말씀해 주신 내용으로 인스타 카드뉴스나 포스터를 바로 제작해 드릴까요?"라고 자연스럽게 권유하세요.`;
 
-    const system=`당신은 월계1동 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 홍보 마케팅 전문가이자 비주얼 디자이너입니다.
-사장님이 홍보 요청이나 수정 사항을 말하면, 이전 대화 내역의 요구사항(가격, 특정 인물, 메뉴명 등)을 충실히 바탕으로 하여, 친절하고 다정한 조언과 함께 **캐러셀(슬라이드 카드뉴스) 또는 단일 포스터 JSON**을 반드시 \`\`\`json 코드 블록으로 완성해서 제공하세요.
-${contextNotice}
+      const reply=await chat([{role:'system',content:system},...history,{role:'user',content:message}],{
+        model:process.env.OWNER_TEXT_MODEL||textModel(),
+        temperature:0.7,
+        maxTokens:450,
+        timeout:30000
+      });
+
+      res.json({reply:reply.trim()});
+    }catch(e){failure(res,e);}
+  });
+
+  // 2. 논문 기반 One-Pass 정형화 생성 엔드포인트 (/synthesize-visual)
+  // Structured Prompting -> Normalization (Caption + 5~7 Hashtags + Visual Prompt) -> Web Image Binding -> Auto Persistence
+  router.post('/synthesize-visual',owner,limit(15),async(req,res)=>{
+    const type=req.body?.type==='card'?'card':'carousel'; // 'carousel' | 'card'
+    const promptBrief=clean(req.body?.promptBrief,1000);
+    const history=Array.isArray(req.body?.history)?req.body.history.slice(-10).filter(x=>['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,1000)})):[];
+    try{
+      const place=(await getCommunityPlaces()).items.find(p=>p.id===req.owner.placeId);
+      const conversationContext=history.length>0
+        ? `\n[누적 대화 내역]\n${history.map(h=>`${h.role==='user'?'사장님':'마케터'}: ${h.content}`).join('\n')}\n`
+        : '';
+
+      if(type==='card'){
+        // 단일 상업용 포스터 One-Pass 생성
+        const systemPrompt=`당신은 소셜 미디어 전문 크리에이티브 디렉터입니다. 월계1동 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 상업용 프로모션 포스터를 원패스(One-Pass)로 완성하세요.
+${conversationContext}
+사장님 추가 요청: "${promptBrief||'대화 내역을 바탕으로 매력적인 포스터 제작'}"
 [원칙]
-1. 이전 대화나 사장님의 요청에 특정 연예인, 아이돌, 셀럽(예: 카리나, 뉴진스, 아이유, 차은우, 성시경 등)이 언급되거나 변경을 요청하면, 절대로 다른 인물로 바꾸지 말고 반드시 사장님이 지정한 그 인물(celebrityName 및 imageQuery)로 구성하세요!
-2. 사장님이 "포스터"를 원하면 단일 포스터 JSON(POSTER_GUIDE)을, "캐러셀/카드뉴스/스토리"를 원하면 캐러셀 JSON(CAROUSEL_GUIDE)을 제공하세요. (기본 판단: ${wantsPoster?'단일 포스터(card) 우선':'캐러셀(carousel) 우선'})
-3. 포스터를 만들 때도, 배경으로 쓸 최적의 실제 음식/매장 사진 웹 검색어 "imageQuery"를 반드시 포함하세요. (예: "${place?.name||'광운대'} 음식", "푸짐한 고기 한상", "칼국수 접시 클로즈업" 등)
-4. 중요: 대화 답변 텍스트에는 사장님을 위한 다정하고 명쾌한 설명만 한글로 작성하세요. JSON 데이터는 반드시 오직 \`\`\`json \`\`\` 코드 블록 안에만 넣고, 대화 본문에 JSON 형식의 속성이나 중괄호 문자열을 절대 섞지 마세요.
-${CAROUSEL_GUIDE}
+1. 대화 내역에서 언급된 할인율, 혜택, 특정 인물, 메뉴명 등을 반드시 정확히 반영하세요.
+2. 배경으로 쓸 실제 음식/매장 사진의 웹 검색어(imageQuery)를 정확히 명시하세요. (타 식당 간판 배제, 음식 접시 위주)
+3. 반드시 유효한 JSON만 반환하세요:
 ${POSTER_GUIDE}`;
 
-    const raw=await chat([{role:'system',content:system},...history,{role:'user',content:message}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.7,maxTokens:1300,timeout:60000});
-    
-    // 1) 마크다운 코드 블록 또는 raw JSON 객체 탐지
-    let blockMatch=raw.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
-    if(!blockMatch){
-      const directMatch=raw.match(/(\{[\s\S]*?(?:"slides"|"layout")[\s\S]*?\})/);
-      if(directMatch)blockMatch=directMatch;
-    }
+        const cardData=await chatJSON([{role:'system',content:systemPrompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.6,maxTokens:700,timeout:45000});
+        const card=cleanCard(cardData);
+        if(!card)throw new Error('포스터 생성에 실패했어요.');
 
-    let card=null,carousel=null;
-    if(blockMatch){
-      try{
-        const parsed=JSON.parse(blockMatch[1]);
-        if(Array.isArray(parsed.slides)){
-          carousel=cleanCarousel(parsed);
-          if(carousel){
-            carousel.aspectRatio='4:5';
-            // 모든 슬라이드에 대해 실제 웹 사진을 서버에서 자동 발굴하여 바인딩
-            await Promise.all(carousel.slides.map(async s=>{
-              s.image = await searchSlideImage({
-                query: s.imageQuery,
-                type: s.type,
-                celebrityName: s.celebrityName,
-                shopName: place?.name,
-                shopKind: place?.kind
-              });
-            }));
-            // 생성된 캐러셀을 무조건 히스토리에 자동 보관
-            await store.saveProposal(req.owner.placeId,{
-              brief:message,
-              format:'portrait',
-              copy:`[${carousel.concept}] ${carousel.slides.map(s=>s.title).join(' / ')}`,
-              carousel
-            });
-          }
-        }else if(parsed.title || parsed.layout){
-          card=cleanCard(parsed);
-          if(card){
-            // 단일 포스터에도 실제 웹 음식/매장 실사 사진 자동 검색 결합
-            const posterQuery=parsed.imageQuery || `${place?.name||''} ${card.title} 음식 사진`;
-            const bgImg=await searchSlideImage({
-              query:posterQuery,
-              type:'menu',
-              shopName:place?.name,
-              shopKind:place?.kind
-            });
-            if(bgImg) card.bgImage=bgImg;
-            // 생성된 포스터를 무조건 히스토리에 자동 보관
-            await store.saveProposal(req.owner.placeId,{
-              brief:message,
-              format:'portrait',
-              copy:`[${card.title}] ${card.benefit}\n${card.body}`,
-              card
-            });
-          }
-        }
-      }catch{}
-    }
+        // 실제 웹 실사 사진 자동 검색 및 결합
+        const posterQuery=cardData.imageQuery || `${place?.name||''} ${card.title} 음식 사진`;
+        const bgImg=await searchSlideImage({
+          query:posterQuery,
+          type:'menu',
+          shopName:place?.name,
+          shopKind:place?.kind
+        });
+        if(bgImg) card.bgImage=bgImg;
 
-    // 2) reply에서 모든 JSON 블록과 중괄호 JSON 데이터 영역을 깨끗이 제거하여 본문에 노출 방지
-    let cleanReply=raw.replace(/```(?:json)?[\s\S]*?```/g,'');
-    cleanReply=cleanReply.replace(/\{[\s\S]*?(?:"slides"|"layout"|"title"|"concept")[\s\S]*?\}/g,'');
-    cleanReply=cleanReply.trim();
-    if(!cleanReply){
-      cleanReply=carousel?'📸 인스타그램 캐러셀 카드뉴스를 우측 스튜디오에 반영했어요! 슬라이드를 확인해 보세요.':card?'📜 포스터를 우측 스튜디오에 반영했어요! 확인해 보세요.':'말씀해 주신 내용으로 홍보물을 준비했어요.';
-    }
+        // 히스토리(proposals)에 자동 보관
+        const row=await store.saveProposal(req.owner.placeId,{
+          brief:promptBrief||card.title,
+          format:'portrait',
+          copy:`[${card.title}] ${card.benefit}\n${card.body}`,
+          card
+        });
 
-    res.json({
-      reply:cleanReply,
-      card,
-      carousel
-    });
-  }catch(e){failure(res,e);}});
+        return res.json({card,proposalId:row?.id});
+      }else{
+        // 인스타그램 캐러셀 (3~5장 카드뉴스) One-Pass 생성
+        const systemPrompt=`당신은 인스타그램 전문 바이럴 마케터입니다. 월계1동 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 인스타그램 캐러셀(슬라이드 카드뉴스 3~5장)을 원패스로 기획하세요.
+${conversationContext}
+사장님 추가 요청: "${promptBrief||'대화 내역을 바탕으로 인스타 카드뉴스 제작'}"
+[원칙]
+1. 대화 내역에 특정 연예인, 아이돌, 셀럽(예: 카리나, 뉴진스, 아이유, 차은우, 성시경 등)이 언급되어 있다면, 절대로 바꾸지 말고 그 인물(celebrityName 및 imageQuery)을 주인공으로 추천 슬라이드를 기획하세요!
+2. 5~7개의 타깃 해시태그와 고화질 실사 이미지 검색어(imageQuery)를 명확히 작성하세요.
+반드시 유효한 JSON만 반환하세요:
+${CAROUSEL_GUIDE}`;
+
+        const data=await chatJSON([{role:'system',content:systemPrompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.7,maxTokens:1200,timeout:60000});
+        const carousel=cleanCarousel(data);
+        if(!carousel)throw new Error('캐러셀 생성에 실패했어요.');
+        carousel.aspectRatio='4:5';
+
+        // 모든 슬라이드에 대해 실제 웹 사진을 서버에서 자동 발굴하여 바인딩
+        await Promise.all(carousel.slides.map(async s=>{
+          s.image = await searchSlideImage({
+            query: s.imageQuery,
+            type: s.type,
+            celebrityName: s.celebrityName,
+            shopName: place?.name,
+            shopKind: place?.kind
+          });
+        }));
+
+        // 히스토리(proposals)에 자동 보관
+        const row=await store.saveProposal(req.owner.placeId,{
+          brief:promptBrief||carousel.concept,
+          format:'portrait',
+          copy:`[${carousel.concept}] ${carousel.slides.map(s=>s.title).join(' / ')}`,
+          carousel
+        });
+
+        return res.json({carousel,proposalId:row?.id});
+      }
+    }catch(e){failure(res,e);}
+  });
+
   router.post('/transcribe',owner,limit(12),async(req,res)=>{const audio=req.body?.audio,mime=clean(req.body?.mime,80),match=typeof audio==='string'&&audio.match(/^data:audio\/(webm|mp4|mpeg|ogg|wav)(?:;[^,]+)*;base64,/);if(!match||audio.length>6_000_000)return res.status(400).json({error:'5MB 이하의 녹음 파일을 보내 주세요.'});try{const base64=audio.split(',')[1],form=new FormData();form.append('file',new Blob([Buffer.from(base64,'base64')],{type:mime||`audio/${match[1]}`}),`recording.${match[1]}`);form.append('model',process.env.OWNER_STT_MODEL||'openai/gpt-4o-mini-transcribe');form.append('language','ko');const data=await ai('audio/transcriptions',form,true);res.json({text:data.text||''});}catch(e){failure(res,e);}});
   router.post('/proposals',owner,limit(6,3600000),async(req,res)=>{const brief=clean(req.body?.brief,1000),format=req.body?.format||'portrait';if(!brief||!['square','portrait'].includes(format))return res.status(400).json({error:'홍보 목적과 이미지 형태를 선택해 주세요.'});try{
     const place=(await getCommunityPlaces()).items.find(p=>p.id===req.owner.placeId);

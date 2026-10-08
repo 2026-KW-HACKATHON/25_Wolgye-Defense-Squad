@@ -46,26 +46,38 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const [currentStepInfo,setCurrentStepInfo]=useState(null);
   const stepTimer=useRef(null);
 
-  const deriveStepsForContext=taskText=>{
+  const deriveStepsForContext=(taskText, actionType='visual')=>{
     const text=String(taskText||'');
-    const celebMatch=text.match(/(카리나|뉴진스|아이유|차은우|성시경|백종원|풍자|[가-힣]{2,4}\s*(?:아이돌|배우|가수|연예인))/);
+    const celebMatch=text.match(/(카리나|뉴진스|아이유|차은우|성시경|백종원|풍자|이영자|유재석|쯔양|침착맨|안성재|최현석|[가-힣]{2,4}\s*(?:아이돌|배우|가수|연예인))/);
     const celebName=celebMatch?celebMatch[1]:'화제의 미식 셀럽';
+    const isCeleb=Boolean(celebMatch);
+
+    const foodMatch=text.match(/(삼겹살|제육|돈까스|돈가스|치킨|피자|국밥|김치찌개|된장찌개|파스타|스테이크|초밥|스시|회|마라탕|떡볶이|냉면|라면|우동|칼국수|커피|디저트|베이커리|빵|샌드위치|샐러드)/);
+    const foodName=foodMatch?foodMatch[1]:'시그니처 대표 메뉴';
+
+    if(actionType==='chat'){
+      return [
+        {icon:'💬',text:'1단계: 사장님 홍보 고민 및 마케팅 맥락 분석 중'},
+        {icon:'💡',text:'2단계: 골목 상권 맞춤 카피라이팅 조언 작성 중'}
+      ];
+    }
+
     const isPoster=/(포스터|단일\s*포스터|할인\s*포스터)/i.test(text);
 
     if(isPoster){
       return [
-        {icon:'🎯',text:`1단계: 사장님 요청 분석 ("${text.slice(0,25)}...") 기획 중`},
-        {icon:'✍️',text:`2단계: 파격 혜택 카피라이팅 & 핵심 헤드라인 문구 작성 중`},
-        {icon:'📸',text:`3단계: 우리 동네·음식 실사 사진 웹 검색 & 배경 매칭 중`},
-        {icon:'🎨',text:`4단계: 상업용 포스터 레이아웃 & 도장 스타일링 완성 중`}
+        {icon:'🎯',text:`1단계: 사장님 대화 분석 ("${text.slice(0,20)}...") 기획 중`},
+        {icon:'✍️',text:`2단계: [${foodName}] 혜택 카피라이팅 & 핵심 헤드라인 문구 작성 중`},
+        {icon:'📸',text:`3단계: [${foodName}] 고화질 실사 사진 웹 검색 및 배경 검증 중`},
+        {icon:'🎨',text:`4단계: 상업용 포스터 레이아웃 완성 & 히스토리 보관 중`}
       ];
     }
 
     return [
-      {icon:'🎯',text:`1단계: 요청 분석 및 ${celebName ? `${celebName} 출연 ` : ''}스토리 콘셉트 기획 중`},
-      {icon:'✍️',text:`2단계: 슬라이드별 훅(Hook) & ${celebName} 추천 멘트 작성 중`},
-      {icon:'📸',text:`3단계: ${celebName ? `${celebName} 실사 사진 & ` : ''}시그니처 메뉴 웹 사진 검색 및 검증 중`},
-      {icon:'🎨',text:`4단계: 인스타그램 피드 4:5 규격 스티커 & 비주얼 바인딩 완성 중`}
+      {icon:'🎯',text:`1단계: 대화 내역 분석 및 ${isCeleb ? `${celebName} 출연 ` : ''}[${foodName}] 카드뉴스 기획 중`},
+      {icon:'✍️',text:`2단계: 슬라이드별 훅(Hook) & ${isCeleb ? `${celebName} 추천 멘트` : '방문 유도 카피'} 작성 중`},
+      {icon:'📸',text:`3단계: ${isCeleb ? `${celebName} 실사 사진 & ` : ''}[${foodName}] 웹 사진 검색 및 적합성 검증 중`},
+      {icon:'🎨',text:`4단계: 인스타그램 4:5 피드 규격 비주얼 바인딩 완성 & 히스토리 보관 중`}
     ];
   };
 
@@ -83,20 +95,21 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const previewUrls=useRef([]);
   const selectedPlace=places.find(p=>p.id===placeId);
 
-  const run=async (work, contextPrompt='')=>{
+  const run=async (work, contextPrompt='', actionType='visual')=>{
     setBusy(true);
     setError('');
     setNotice('');
-    const steps=deriveStepsForContext(contextPrompt||message||brief);
+    const steps=deriveStepsForContext(contextPrompt||message||brief, actionType);
     setGeneratingStep(1);
     setCurrentStepInfo(steps[0]);
     let s=1;
     clearInterval(stepTimer.current);
+    const intervalTime=actionType==='chat'?1000:1800;
     stepTimer.current=setInterval(()=>{
       s=(s%steps.length)+1;
       setGeneratingStep(s);
       setCurrentStepInfo(steps[s-1]);
-    },1800);
+    },intervalTime);
     try{
       await work();
     }catch(e){
@@ -153,11 +166,12 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
     });
   }
 
-  // AI 홍보 대화 전송 및 실시간 수정 (Revision Loop)
+  // 1. 가벼운 실시간 마케팅 대화 (Fast Conversational Ideation)
   async function send(e){
     e?.preventDefault();
     const text=message.trim();
     if(!text)return;
+    setMessage('');
     await run(async()=>{
       const history=chat.map(x=>({
         role:x.role,
@@ -165,73 +179,81 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
       }));
       const payload={
         message:text,
-        history,
-        currentVisual:activeVisual // 현재 활성화된 캐러셀 or 포스터를 전달하여 지속 수정 가능
+        history
       };
       const d=await api('/chat',{method:'POST',body:payload});
-      setChat(x=>[...x,{role:'user',content:text},{role:'assistant',content:d.reply,card:d.card||null,carousel:d.carousel||null}]);
-      setMessage('');
-      if(d.carousel){
-        setActiveVisual({type:'carousel',data:d.carousel});
-        setNotice('✨ 인스타그램 캐러셀 카드뉴스를 우측 스튜디오에 실시간 반영했어요!');
-        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-      }else if(d.card){
-        setActiveVisual({type:'card',data:d.card});
-        setNotice('✨ 포스터를 우측 스튜디오에 실시간 반영했어요!');
-        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-      }
-    });
+      setChat(x=>[...x,{role:'user',content:text},{role:'assistant',content:d.reply}]);
+    },text,'chat');
   }
 
+  // 2. 논문 기반 One-Pass 확정 정형화 생성 (대화 내역 100% 반영 + 실사 검색 매칭 + 히스토리 자동 보관)
+  async function synthesizeVisual(type='carousel',customBrief=''){
+    const userText=customBrief||message.trim()||brief.trim();
+    const defaultBrief=type==='card'
+      ?'사장님 대화 내역을 바탕으로 매력적인 상업용 단일 포스터 제작'
+      :`${selectedPlace?.name||'우리 가게'} 대표 매력과 대화 내역을 담은 인스타그램 4:5 캐러셀 카드뉴스`;
+    const promptBrief=userText||defaultBrief;
+    const history=chat.map(x=>({role:x.role,content:x.content}));
+
+    await run(async()=>{
+      const d=await api('/synthesize-visual',{
+        method:'POST',
+        body:{
+          type,
+          promptBrief,
+          history
+        }
+      });
+
+      if(d.carousel){
+        setActiveVisual({type:'carousel',data:d.carousel});
+        setChat(x=>[
+          ...x,
+          {role:'user',content:`[인스타 카드뉴스 생성 요청] ${promptBrief}`},
+          {
+            role:'assistant',
+            content:'📸 사장님과 나눈 대화 내역을 바탕으로 인스타그램 캐러셀 카드뉴스를 원패스(One-Pass)로 완성했어요! 우측 스튜디오와 하단 보관함에서 확인해 보세요.',
+            carousel:d.carousel
+          }
+        ]);
+        setNotice('🎉 대화 내용을 바탕으로 인스타 카드뉴스가 완성되어 우측 스튜디오와 하단 보관함에 보관되었습니다!');
+      }else if(d.card){
+        setActiveVisual({type:'card',data:d.card});
+        setChat(x=>[
+          ...x,
+          {role:'user',content:`[단일 포스터 생성 요청] ${promptBrief}`},
+          {
+            role:'assistant',
+            content:'📜 사장님과 나눈 대화 내역을 바탕으로 상업용 포스터를 원패스(One-Pass)로 완성했어요! 우측 스튜디오와 하단 보관함에서 확인해 보세요.',
+            card:d.card
+          }
+        ]);
+        setNotice('🎉 대화 내용을 바탕으로 단일 포스터가 완성되어 우측 스튜디오와 하단 보관함에 보관되었습니다!');
+      }
+
+      // 히스토리(proposals) 자동 갱신
+      api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
+    },promptBrief,'visual');
+  }
 
   // 1. 인스타 캐러셀 카드뉴스 쾌속 생성 (대화 내역 100% 반영)
   async function generateQuickCarousel(promptText){
     const briefText=promptText||message.trim()||`${selectedPlace?.name||'우리 가게'} 대표 메뉴와 매력을 담은 인스타 카드뉴스`;
-    const history=chat.map(x=>({role:x.role,content:x.content}));
-    await run(async()=>{
-      const d=await api('/carousel',{method:'POST',body:{brief:briefText,history}});
-      if(d.carousel){
-        setActiveVisual({type:'carousel',data:d.carousel});
-        setChat(x=>[...x,{role:'user',content:`[캐러셀 제작 요청] ${briefText}`},{role:'assistant',content:'📸 이전 대화 내용과 요청을 바탕으로 인스타그램 캐러셀 카드뉴스를 제작했어요! 우측 스튜디오와 하단 보관함을 확인해 보세요.',carousel:d.carousel}]);
-        setNotice('🎉 인스타그램 캐러셀 카드뉴스가 생성되었습니다! 우측 스튜디오와 하단 히스토리에 보관되었습니다.');
-        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-      }
-    });
+    await synthesizeVisual('carousel',briefText);
   }
 
   // 2. 연예인·셀럽 추천 스토리 쾌속 생성 (사장님이 지정한 연예인 및 대화 내역 100% 반영)
   async function generateQuickCelebStory(){
     const text=message.trim();
     const briefText=text?`[셀럽 추천 스토리] ${text}`:`${selectedPlace?.name||'우리 가게'} 화제의 인기 아이돌·셀럽 극찬 맛집 스토리`;
-    const history=chat.map(x=>({role:x.role,content:x.content}));
-    await run(async()=>{
-      const d=await api('/carousel',{method:'POST',body:{brief:briefText,history}});
-      if(d.carousel){
-        setActiveVisual({type:'carousel',data:d.carousel});
-        setChat(x=>[...x,{role:'user',content:`[셀럽 스토리 요청] ${briefText}`},{role:'assistant',content:'⭐ 대화 내역과 요청하신 인물을 반영하여 셀럽 추천 카드뉴스를 제작했어요! 우측 스튜디오와 하단 보관함에서 확인해 보세요.',carousel:d.carousel}]);
-        setNotice('🎉 셀럽 추천 스토리가 생성되었습니다! 우측 스튜디오와 하단 히스토리에 보관되었습니다.');
-        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-      }
-    });
+    await synthesizeVisual('carousel',briefText);
   }
 
   // 3. 파격 할인 단일 포스터 쾌속 생성 (대화 내역 반영 및 실사 사진 결합)
   async function generateQuickPoster(promptText){
     const userText=promptText||message.trim()||'주말 학생 할인 20% 파격 혜택 단일 포스터';
     const briefText=userText.includes('포스터')?userText:`${userText} 단일 포스터로 만들어줘`;
-    const history=chat.map(x=>({role:x.role,content:x.content}));
-    await run(async()=>{
-      const d=await api('/chat',{method:'POST',body:{message:briefText,history,currentVisual:null}});
-      if(d.card){
-        setActiveVisual({type:'card',data:d.card});
-        setChat(x=>[...x,{role:'user',content:`[단일 포스터 요청] ${briefText}`},{role:'assistant',content:d.reply||'📜 대화 내역을 바탕으로 단일 포스터를 제작했어요! 우측 스튜디오에서 확인해 보세요.',card:d.card}]);
-        setNotice('🎉 단일 포스터가 생성되었습니다! 우측 스튜디오와 하단 히스토리에 보관되었습니다.');
-        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-      }else if(d.carousel){
-        setActiveVisual({type:'carousel',data:d.carousel});
-        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
-      }
-    });
+    await synthesizeVisual('card',briefText);
   }
 
 
@@ -591,13 +613,39 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                   </div>
 
 
+                  {/* 대화 내역 기반 One-Pass 확정 생성 버튼 바 (대화가 있을 때 노출) */}
+                  {chat.length>0&&(
+                    <div style={{display:'flex',gap:'8px',margin:'10px 0 6px',flexWrap:'wrap'}}>
+                      <button
+                        type="button"
+                        className="button lime small"
+                        disabled={busy}
+                        onClick={()=>synthesizeVisual('carousel')}
+                        style={{flex:1,minWidth:'150px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',fontWeight:700}}
+                        title="지금까지 나눈 대화 내용을 바탕으로 4:5 인스타그램 캐러셀 카드뉴스를 한 번에 생성합니다"
+                      >
+                        <Sparkles size={14}/> ✨ 대화 내용으로 카드뉴스 완성
+                      </button>
+                      <button
+                        type="button"
+                        className="button outline small"
+                        disabled={busy}
+                        onClick={()=>synthesizeVisual('card')}
+                        style={{flex:1,minWidth:'150px',display:'flex',alignItems:'center',justifyContent:'center',gap:'5px',fontWeight:700}}
+                        title="지금까지 나눈 대화 내용을 바탕으로 상업용 단일 포스터를 한 번에 생성합니다"
+                      >
+                        📜 대화 내용으로 단일 포스터 완성
+                      </button>
+                    </div>
+                  )}
+
                   {/* 대화 입력 폼 (텍스트 + 음성 녹음 + 전송) */}
                   <form className="owner-chat-form" onSubmit={send}>
                     <input
                       value={message}
                       onChange={e=>setMessage(e.target.value)}
                       maxLength={1000}
-                      placeholder="홍보 고민, 인스타 카드뉴스 기획, 수정 요청을 적어주세요"
+                      placeholder="홍보 고민, 이벤트 기획을 말해주세요 (빠른 1:1 상담)"
                     />
                     <button
                       type="button"
@@ -630,7 +678,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                           type="button"
                           className="button lime"
                           disabled={busy||!brief.trim()}
-                          onClick={()=>generateQuickCarousel(brief)}
+                          onClick={()=>synthesizeVisual('carousel',brief)}
                         >
                           📸 인스타 캐러셀 카드뉴스 생성
                         </button>
@@ -638,7 +686,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                           type="button"
                           className="button outline"
                           disabled={busy||!brief.trim()}
-                          onClick={generate}
+                          onClick={()=>synthesizeVisual('card',brief)}
                         >
                           📜 단일 포스터 생성
                         </button>
