@@ -114,6 +114,7 @@ export const POSTER_TEMPLATES = {
  */
 export default function PromoCardCanvas({ card, shopName, className = '', onEdit, editable = false }) {
   const [viewMode, setViewMode] = useState('poster'); // 'poster' (세로 포스터) or 'compact' (가로 카드)
+  const [showImageSearch, setShowImageSearch] = useState(false);
 
   if (!card) return null;
 
@@ -503,7 +504,7 @@ export default function PromoCardCanvas({ card, shopName, className = '', onEdit
             </div>
           </div>
 
-          {/* 3. 스탬프 도장 및 뷰 모드 */}
+          {/* 3. 스탬프 도장, 배경 사진 검색 및 뷰 모드 */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ fontSize: '12px', fontWeight: 800, color: '#334155' }}>🏷️ 도장:</span>
@@ -528,7 +529,41 @@ export default function PromoCardCanvas({ card, shopName, className = '', onEdit
               ))}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setShowImageSearch(true)}
+                style={{
+                  padding: '4px 9px',
+                  borderRadius: '6px',
+                  border: '1.5px solid #1b3b11',
+                  background: '#f1f4e7',
+                  color: '#1b3b11',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                📷 배경 사진 웹 검색/변경
+              </button>
+              {card.bgImage && (
+                <button
+                  type="button"
+                  onClick={() => onEdit({ ...card, bgImage: null })}
+                  style={{
+                    padding: '4px 7px',
+                    borderRadius: '6px',
+                    border: '1px solid #fecdd3',
+                    background: '#fff1f2',
+                    color: '#e11d48',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  사진 제거
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setViewMode(v => v === 'poster' ? 'compact' : 'poster')}
@@ -549,9 +584,22 @@ export default function PromoCardCanvas({ card, shopName, className = '', onEdit
           </div>
         </div>
       )}
+
+      {/* 포스터용 웹 이미지 검색 모달 */}
+      <ImageSearchModal
+        isOpen={showImageSearch}
+        onClose={() => setShowImageSearch(false)}
+        shopName={shopName}
+        initialQuery={`${shopName || '월계동'} ${card.title || '음식'}`}
+        onSelect={(imgUrl) => {
+          onEdit({ ...card, bgImage: imgUrl });
+          setShowImageSearch(false);
+        }}
+      />
     </div>
   );
 }
+
 
 /**
  * 고해상도 세로형 상업용 포스터(800 x 1060 px) Canvas 2D 이미지 생성 유틸리티
@@ -606,6 +654,7 @@ export function generatePromoImageBase64(card, shopName) {
       ctx.lineWidth = 6;
       ctx.strokeRect(26, 26, 748, 1008);
     }
+
 
     // 2. 상단 헤더 배지 & 매장명
     ctx.fillStyle = layout === 'neon-night' ? '#ec4899' : theme.badgeBg;
@@ -1142,6 +1191,7 @@ export function InstagramCarouselView({
   const [aspectRatio, setAspectRatio] = useState(carousel?.aspectRatio || '4:5');
   const [downloading, setDownloading] = useState(false);
   const [showEditDrawer, setShowEditDrawer] = useState(false);
+  const [showImageSearch, setShowImageSearch] = useState(false);
 
   if (!carousel || !Array.isArray(carousel.slides) || carousel.slides.length === 0) {
     return null;
@@ -1155,6 +1205,7 @@ export function InstagramCarouselView({
     const newSlides = slides.map((s, i) => (i === activeIndex ? { ...s, ...fields } : s));
     onEdit({ ...carousel, slides: newSlides });
   };
+
 
   const downloadCurrentSlidePng = async () => {
     setDownloading(true);
@@ -1264,24 +1315,43 @@ export function InstagramCarouselView({
 
         <div style={{ display: 'flex', gap: '6px' }}>
           {editable && (
-            <button
-              type="button"
-              onClick={() => setShowEditDrawer(!showEditDrawer)}
-              style={{
-                padding: '5px 10px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                background: showEditDrawer ? '#f1f5f9' : '#ffffff',
-                color: '#334155',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer'
-              }}
-            >
-              ✏️ 문구 수정
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowImageSearch(true)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #1b3b11',
+                  background: '#f1f4e7',
+                  color: '#1b3b11',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                📷 사진 변경/검색
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowEditDrawer(!showEditDrawer)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: showEditDrawer ? '#f1f5f9' : '#ffffff',
+                  color: '#334155',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                ✏️ 문구 수정
+              </button>
+            </>
           )}
           <button
+
             type="button"
             disabled={downloading}
             onClick={downloadCurrentSlidePng}
@@ -1829,8 +1899,21 @@ export function InstagramCarouselView({
           </div>
         </div>
       )}
+
+      {/* 캐러셀 현재 슬라이드용 웹 이미지 검색 모달 */}
+      <ImageSearchModal
+        isOpen={showImageSearch}
+        onClose={() => setShowImageSearch(false)}
+        shopName={shopName}
+        initialQuery={currentSlide.imageQuery || `${shopName || '월계동'} ${currentSlide.title || ''}`}
+        onSelect={(imgUrl) => {
+          updateCurrentSlide({ image: imgUrl });
+          setShowImageSearch(false);
+        }}
+      />
     </div>
   );
 }
+
 
 

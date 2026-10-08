@@ -43,14 +43,31 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const [proposals,setProposals]=useState([]);
   const [preview,setPreview]=useState({});
   const [generatingStep,setGeneratingStep]=useState(0);
+  const [currentStepInfo,setCurrentStepInfo]=useState(null);
   const stepTimer=useRef(null);
 
-  const GENERATION_STEPS=[
-    {icon:'🎯',text:'1단계: 사장님 요청 분석 & 홍보 콘셉트 기획 중...'},
-    {icon:'✍️',text:'2단계: 시선을 사로잡는 AI 카피라이팅 & 문구 작성 중...'},
-    {icon:'📸',text:'3단계: 실사 음식·거리·셀럽 사진 웹 검색 & 비주얼 바인딩 중...'},
-    {icon:'🎨',text:'4단계: 실시간 캔버스 스타일링 & 레이아웃 완성 중...'}
-  ];
+  const deriveStepsForContext=taskText=>{
+    const text=String(taskText||'');
+    const celebMatch=text.match(/(카리나|뉴진스|아이유|차은우|성시경|백종원|풍자|[가-힣]{2,4}\s*(?:아이돌|배우|가수|연예인))/);
+    const celebName=celebMatch?celebMatch[1]:'화제의 미식 셀럽';
+    const isPoster=/(포스터|단일\s*포스터|할인\s*포스터)/i.test(text);
+
+    if(isPoster){
+      return [
+        {icon:'🎯',text:`1단계: 사장님 요청 분석 ("${text.slice(0,25)}...") 기획 중`},
+        {icon:'✍️',text:`2단계: 파격 혜택 카피라이팅 & 핵심 헤드라인 문구 작성 중`},
+        {icon:'📸',text:`3단계: 우리 동네·음식 실사 사진 웹 검색 & 배경 매칭 중`},
+        {icon:'🎨',text:`4단계: 상업용 포스터 레이아웃 & 도장 스타일링 완성 중`}
+      ];
+    }
+
+    return [
+      {icon:'🎯',text:`1단계: 요청 분석 및 ${celebName ? `${celebName} 출연 ` : ''}스토리 콘셉트 기획 중`},
+      {icon:'✍️',text:`2단계: 슬라이드별 훅(Hook) & ${celebName} 추천 멘트 작성 중`},
+      {icon:'📸',text:`3단계: ${celebName ? `${celebName} 실사 사진 & ` : ''}시그니처 메뉴 웹 사진 검색 및 검증 중`},
+      {icon:'🎨',text:`4단계: 인스타그램 피드 4:5 규격 스티커 & 비주얼 바인딩 완성 중`}
+    ];
+  };
 
   // 캠페인 & 키워드 & 쿠폰 & 리포트 & 배달앱 링크
   const [campaigns,setCampaigns]=useState([]);
@@ -66,16 +83,19 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const previewUrls=useRef([]);
   const selectedPlace=places.find(p=>p.id===placeId);
 
-  const run=async work=>{
+  const run=async (work, contextPrompt='')=>{
     setBusy(true);
     setError('');
     setNotice('');
+    const steps=deriveStepsForContext(contextPrompt||message||brief);
     setGeneratingStep(1);
+    setCurrentStepInfo(steps[0]);
     let s=1;
     clearInterval(stepTimer.current);
     stepTimer.current=setInterval(()=>{
-      s=(s%4)+1;
+      s=(s%steps.length)+1;
       setGeneratingStep(s);
+      setCurrentStepInfo(steps[s-1]);
     },1800);
     try{
       await work();
@@ -84,9 +104,11 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
     }finally{
       clearInterval(stepTimer.current);
       setGeneratingStep(0);
+      setCurrentStepInfo(null);
       setBusy(false);
     }
   };
+
 
   const load=async()=>{
     const me=await api('/me');
@@ -152,55 +174,66 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
       if(d.carousel){
         setActiveVisual({type:'carousel',data:d.carousel});
         setNotice('✨ 인스타그램 캐러셀 카드뉴스를 우측 스튜디오에 실시간 반영했어요!');
+        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
       }else if(d.card){
         setActiveVisual({type:'card',data:d.card});
         setNotice('✨ 포스터를 우측 스튜디오에 실시간 반영했어요!');
+        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
       }
     });
   }
 
-  // 1. 인스타 캐러셀 카드뉴스 쾌속 생성
+
+  // 1. 인스타 캐러셀 카드뉴스 쾌속 생성 (대화 내역 100% 반영)
   async function generateQuickCarousel(promptText){
     const briefText=promptText||message.trim()||`${selectedPlace?.name||'우리 가게'} 대표 메뉴와 매력을 담은 인스타 카드뉴스`;
+    const history=chat.map(x=>({role:x.role,content:x.content}));
     await run(async()=>{
-      const d=await api('/carousel',{method:'POST',body:{brief:briefText}});
+      const d=await api('/carousel',{method:'POST',body:{brief:briefText,history}});
       if(d.carousel){
         setActiveVisual({type:'carousel',data:d.carousel});
-        setChat(x=>[...x,{role:'user',content:`[캐러셀 제작 요청] ${briefText}`},{role:'assistant',content:'📸 인스타그램 캐러셀 카드뉴스를 제작했어요! 우측 스튜디오에서 슬라이드를 확인하고 대화창에서 수정을 요청해 보세요.',carousel:d.carousel}]);
-        setNotice('🎉 인스타그램 캐러셀 카드뉴스가 생성되었습니다! 우측 스튜디오를 확인해 주세요.');
+        setChat(x=>[...x,{role:'user',content:`[캐러셀 제작 요청] ${briefText}`},{role:'assistant',content:'📸 이전 대화 내용과 요청을 바탕으로 인스타그램 캐러셀 카드뉴스를 제작했어요! 우측 스튜디오와 하단 보관함을 확인해 보세요.',carousel:d.carousel}]);
+        setNotice('🎉 인스타그램 캐러셀 카드뉴스가 생성되었습니다! 우측 스튜디오와 하단 히스토리에 보관되었습니다.');
+        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
       }
     });
   }
 
-  // 2. 연예인·셀럽 추천 스토리 쾌속 생성 (사장님이 지정한 연예인 100% 반영)
+  // 2. 연예인·셀럽 추천 스토리 쾌속 생성 (사장님이 지정한 연예인 및 대화 내역 100% 반영)
   async function generateQuickCelebStory(){
     const text=message.trim();
     const briefText=text?`[셀럽 추천 스토리] ${text}`:`${selectedPlace?.name||'우리 가게'} 화제의 인기 아이돌·셀럽 극찬 맛집 스토리`;
+    const history=chat.map(x=>({role:x.role,content:x.content}));
     await run(async()=>{
-      const d=await api('/carousel',{method:'POST',body:{brief:briefText}});
+      const d=await api('/carousel',{method:'POST',body:{brief:briefText,history}});
       if(d.carousel){
         setActiveVisual({type:'carousel',data:d.carousel});
-        setChat(x=>[...x,{role:'user',content:`[셀럽 스토리 요청] ${briefText}`},{role:'assistant',content:'⭐ 셀럽 추천 카드뉴스를 제작했어요! 슬라이드 3장의 추천 멘트와 사진을 확인해 보세요. 다른 연예인으로 바꾸려면 대화창에 말씀해 주세요.',carousel:d.carousel}]);
-        setNotice('🎉 셀럽 추천 스토리가 생성되었습니다! 우측 스튜디오를 확인해 주세요.');
+        setChat(x=>[...x,{role:'user',content:`[셀럽 스토리 요청] ${briefText}`},{role:'assistant',content:'⭐ 대화 내역과 요청하신 인물을 반영하여 셀럽 추천 카드뉴스를 제작했어요! 우측 스튜디오와 하단 보관함에서 확인해 보세요.',carousel:d.carousel}]);
+        setNotice('🎉 셀럽 추천 스토리가 생성되었습니다! 우측 스튜디오와 하단 히스토리에 보관되었습니다.');
+        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
       }
     });
   }
 
-  // 3. 파격 할인 단일 포스터 쾌속 생성 (즉시 우측 스튜디오에 포스터 렌더링)
+  // 3. 파격 할인 단일 포스터 쾌속 생성 (대화 내역 반영 및 실사 사진 결합)
   async function generateQuickPoster(promptText){
     const userText=promptText||message.trim()||'주말 학생 할인 20% 파격 혜택 단일 포스터';
     const briefText=userText.includes('포스터')?userText:`${userText} 단일 포스터로 만들어줘`;
+    const history=chat.map(x=>({role:x.role,content:x.content}));
     await run(async()=>{
-      const d=await api('/chat',{method:'POST',body:{message:briefText,currentVisual:null}});
+      const d=await api('/chat',{method:'POST',body:{message:briefText,history,currentVisual:null}});
       if(d.card){
         setActiveVisual({type:'card',data:d.card});
-        setChat(x=>[...x,{role:'user',content:`[단일 포스터 요청] ${briefText}`},{role:'assistant',content:d.reply||'📜 단일 포스터를 제작했어요! 우측 스튜디오에서 확인해 보세요.',card:d.card}]);
-        setNotice('🎉 단일 포스터가 생성되었습니다! 우측 스튜디오를 확인해 주세요.');
+        setChat(x=>[...x,{role:'user',content:`[단일 포스터 요청] ${briefText}`},{role:'assistant',content:d.reply||'📜 대화 내역을 바탕으로 단일 포스터를 제작했어요! 우측 스튜디오에서 확인해 보세요.',card:d.card}]);
+        setNotice('🎉 단일 포스터가 생성되었습니다! 우측 스튜디오와 하단 히스토리에 보관되었습니다.');
+        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
       }else if(d.carousel){
         setActiveVisual({type:'carousel',data:d.carousel});
+        api('/proposals').then(res=>setProposals(res.items)).catch(()=>{});
       }
     });
   }
+
 
   // 음성 녹음 제어
   async function toggleRecord(){
@@ -476,12 +509,12 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                 </div>
               </div>
 
-              {/* 진행 상태 인디케이터 (요청 제작 중일 때 실시간 단계 표시) */}
-              {generatingStep>0&&(
+              {/* 진행 상태 인디케이터 (상단 전체 진행 바) */}
+              {generatingStep>0&&currentStepInfo&&(
                 <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:'12px',padding:'12px 18px',margin:'14px 0',boxShadow:'0 2px 8px rgba(37,99,235,0.08)'}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
                     <span style={{fontWeight:800,fontSize:'14px',color:'#1e40af'}}>
-                      {GENERATION_STEPS[generatingStep-1]?.icon} {GENERATION_STEPS[generatingStep-1]?.text}
+                      {currentStepInfo.icon} {currentStepInfo.text}
                     </span>
                     <span style={{fontSize:'12px',fontWeight:700,color:'#2563eb'}}>진행 중 ({generatingStep}/4)</span>
                   </div>
@@ -540,7 +573,23 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                         </ul>
                       </div>
                     )}
+                    {/* 채팅 창 내부 실시간 진행 상태 카드 */}
+                    {busy&&currentStepInfo&&(
+                      <div className="owner-chat-msg assistant">
+                        <div style={{background:'#ffffff',border:'1.5px solid #93c5fd',borderRadius:'15px',padding:'12px 16px',boxShadow:'0 2px 8px rgba(59,130,246,0.1)'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'6px'}}>
+                            <span style={{fontSize:'16px'}}>{currentStepInfo.icon}</span>
+                            <span style={{fontWeight:800,fontSize:'13px',color:'#1e40af'}}>AI 실시간 작업 중...</span>
+                            <span style={{fontSize:'11px',color:'#3b82f6',fontWeight:700,marginLeft:'auto'}}>단계 {generatingStep}/4</span>
+                          </div>
+                          <p style={{margin:0,fontSize:'12.5px',color:'#334155',fontWeight:600}}>
+                            {currentStepInfo.text}
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
+
 
                   {/* 대화 입력 폼 (텍스트 + 음성 녹음 + 전송) */}
                   <form className="owner-chat-form" onSubmit={send}>
@@ -610,7 +659,25 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                   </div>
 
                   <div className="studio-viewer-box">
+                    {/* 비주얼 스튜디오 화면 내 실시간 상황별 진행 단계 표시 */}
+                    {busy&&currentStepInfo&&(
+                      <div style={{background:'#ffffff',border:'2px solid #3b82f6',borderRadius:'16px',padding:'16px 20px',marginBottom:'14px',boxShadow:'0 4px 16px rgba(59,130,246,0.15)'}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
+                          <span style={{fontSize:'14px',fontWeight:800,color:'#1e40af'}}>
+                            {currentStepInfo.icon} {currentStepInfo.text}
+                          </span>
+                          <span style={{background:'#eff6ff',color:'#2563eb',padding:'3px 8px',borderRadius:'99px',fontSize:'11px',fontWeight:800}}>
+                            비주얼 렌더링 {generatingStep}/4
+                          </span>
+                        </div>
+                        <div style={{width:'100%',background:'#dbeafe',borderRadius:'99px',height:'6px',overflow:'hidden'}}>
+                          <div style={{width:`${generatingStep*25}%`,background:'linear-gradient(90deg, #3b82f6, #1d4ed8)',height:'100%',transition:'width 0.4s ease'}}/>
+                        </div>
+                      </div>
+                    )}
+
                     {activeVisual?.type==='carousel'&&(
+
                       <div>
                         <InstagramCarouselView
                           carousel={activeVisual.data}
@@ -695,14 +762,23 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                       return (
                         <article className="studio-history-card" key={p.id}>
                           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-                            <small style={{color:'#64748b',fontSize:'11px'}}>
-                              {new Date(p.createdAt).toLocaleDateString('ko-KR')} · {p.status==='review'?'검토 중':p.status==='approved'?'승인':'미사용'}
-                            </small>
+                            <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+                              <span className="badge-tag" style={{fontSize:'10px',padding:'2px 6px'}}>
+                                {p.carousel?'📸 캐러셀':card?'📜 포스터':'💡 시안'}
+                              </span>
+                              <small style={{color:'#64748b',fontSize:'11px'}}>
+                                {new Date(p.createdAt).toLocaleDateString('ko-KR')}
+                              </small>
+                            </div>
                             <button
                               type="button"
                               className="button outline small"
                               onClick={()=>{
-                                if(card)setActiveVisual({type:'card',data:card});
+                                if(p.carousel){
+                                  setActiveVisual({type:'carousel',data:p.carousel});
+                                }else if(card){
+                                  setActiveVisual({type:'card',data:card});
+                                }
                                 window.scrollTo({top:200,behavior:'smooth'});
                               }}
                             >
@@ -710,7 +786,23 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                             </button>
                           </div>
 
-                          {card?(
+                          {p.carousel?(
+                            <div>
+                              <div style={{fontWeight:800,fontSize:'13px',color:'#0f172a',marginBottom:'4px'}}>
+                                {p.carousel.concept||'인스타그램 캐러셀'}
+                              </div>
+                              <p style={{fontSize:'12px',color:'#475569',margin:'0 0 8px',lineHeight:1.4}}>
+                                총 {p.carousel.slides?.length||0}장 슬라이드 ({p.carousel.slides?.[0]?.title||''})
+                              </p>
+                              {p.carousel.slides?.[0]?.image&&(
+                                <img
+                                  src={p.carousel.slides[0].image.startsWith('http')?`/api/owner/proxy-image?url=${encodeURIComponent(p.carousel.slides[0].image)}`:p.carousel.slides[0].image}
+                                  alt="표지"
+                                  style={{width:'100%',height:'140px',objectFit:'cover',borderRadius:'10px',border:'1px solid #e2e8f0'}}
+                                />
+                              )}
+                            </div>
+                          ):card?(
                             <div style={{transform:'scale(0.85)',transformOrigin:'top center',margin:'-15px 0'}}>
                               <PromoCardCanvas card={card} shopName={selectedPlace?.name} editable={false}/>
                             </div>
@@ -733,6 +825,11 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                                 바로 게시
                               </button>
                             )}
+                            {p.carousel&&p.status!=='rejected'&&(
+                              <button type="button" className="button lime small" onClick={()=>{setActiveVisual({type:'carousel',data:p.carousel});quickPublishActive();}}>
+                                바로 게시
+                              </button>
+                            )}
                             {p.status==='review'&&(
                               <>
                                 <button type="button" className="button outline small" onClick={()=>review(p.id,'approved')}>
@@ -746,6 +843,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                           </div>
                         </article>
                       );
+
                     })}
                   </div>
                 )}
