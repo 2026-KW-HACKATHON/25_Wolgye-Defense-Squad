@@ -21,10 +21,12 @@ export const SYNONYMS={
   닭:['치킨','닭','삼계탕','닭갈비']
 };
 const CATEGORY_WORDS=['한식','중식','일식','양식','분식','카페','술집','치킨','피자','고기','국수','해산물','디저트','커피'];
+const EXPLICIT_CATEGORIES=['한식','중식','일식','양식','분식','카페'];
 const STOP=new Set(['저는','나는','난','우리','그냥','아무','거','것','곳','데','좋아요','좋아','좋겠어요','좋겠어','먹고','싶어요','싶어','원해요','원해','가고','가요','있는','없는','곳이면','이면','정도','쯤','같이','함께','오늘','점심','저녁','아침','이하','이내','까지','안쪽','예산','원','시','분','먹을','먹는','수','있으면','괜찮아요','괜찮아','아무거나','상관없어요','상관없어','다','좋음']);
 
 const known=w=>CATEGORY_WORDS.includes(w)||!!SYNONYMS[w]||Object.values(SYNONYMS).some(v=>v.includes(w));
 const josa=w=>w.replace(/(은|는|이|가|을|를|도|로|으로|이랑|랑|하고|에서|으면|면|이나|나)$/,'');
+const normalizeWant=w=>{const base=josa(w),category=base.replace(/(?:집|음식점)$/,'');return EXPLICIT_CATEGORIES.includes(category)?category:base;};
 
 function koreanMoney(text){
   // 15000원, 1만5천원, 1.5만원, 만원, 8천원, 만오천원
@@ -57,7 +59,7 @@ export function parseCondition(text){
     const w=TASTE[m[1]||m[2]];if(w&&!excludes.includes(w))excludes.push(w);rest=rest.replace(m[0],' ');
   }
   rest=rest.replace(/(\d+(?:\.\d+)?)?\s*만\s*(\S*천)?\s*원?|\d[\d,]*\s*(원|천원|시|분)/g,' ');
-  const wants=[...new Set((rest.match(/[가-힣a-zA-Z]+/g)||[]).map(josa).filter(w=>w.length>=1&&!STOP.has(w)&&!excludes.includes(w)).filter(w=>known(w)||(w.length>=2&&!/(요|자|어|아|에|게|고|서|지|니|다|면|데|죠|네)$/.test(w))))];
+  const wants=[...new Set((rest.match(/[가-힣a-zA-Z]+/g)||[]).map(normalizeWant).filter(w=>w.length>=1&&!STOP.has(w)&&!excludes.includes(w)&&!/^추천/.test(w)).filter(w=>known(w)||(w.length>=2&&!/(요|자|어|아|에|게|고|서|지|니|다|면|데|죠|네)$/.test(w))))];
   return {raw,wants,excludes:[...new Set(excludes)],budget:budgets.length?Math.min(...budgets):null,hour};
 }
 
@@ -142,11 +144,16 @@ export function evaluate(place,condition){
 }
 
 export function rankGroup(places,members,limit=3,at=Date.now()){
+  // 사용자가 명시한 업종은 메뉴 단어가 우연히 겹친 다른 업종으로 대체하지 않는다.
+  // AI가 추가한 표현은 이 필수 업종 판정을 바꿀 수 없다.
+  const requiredCategories=members.map(m=>parseCondition(m.condition??m.parsed.raw).wants.filter(w=>EXPLICIT_CATEGORIES.includes(w)));
   const scored=places.map(place=>{
     const perMember=members.map(m=>({name:m.name,checks:evaluate(place,m.parsed)}));
     const all=perMember.flatMap(m=>m.checks);
     const closedNow=!members.some(m=>m.parsed.hour!=null)&&openingStatus(place,{at})==='closed';
-    const violated=closedNow||all.some(c=>c.status==='violated');
+    const registeredCategory=`${place.kind||''} ${place.category||''}`;
+    const wrongCategory=requiredCategories.some(categories=>categories.length&&!categories.some(category=>registeredCategory.includes(category)));
+    const violated=closedNow||wrongCategory||all.some(c=>c.status==='violated');
     const wantMembers=perMember.filter(m=>m.checks.some(c=>c.kind==='want'&&c.status==='met')).length;
     const askers=members.filter(m=>m.parsed.wants.length).length;
     const met=all.filter(c=>c.status==='met').length,unknown=all.filter(c=>c.status==='unknown').length;

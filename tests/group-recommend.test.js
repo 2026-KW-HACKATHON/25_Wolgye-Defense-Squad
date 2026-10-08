@@ -40,6 +40,15 @@ test('closed hours exclude a place and the result explains each member',async()=
   assert.equal(result.understood[1].hour,23);
   assert.ok(result.items.every(p=>p.memberChecks.length===2));
 });
+
+test('a request for a snack bar never recommends a different cuisine just because its menu mentions a snack',()=>{
+  const result=rankGroup([
+    {id:'soup',name:'감자탕집',kind:'감자탕',category:'음식점 > 한식 > 감자탕',info:info({menu:['순대 8,000원','neighbor']})},
+    {id:'snack',name:'김밥집',kind:'떡볶이',category:'음식점 > 분식 > 떡볶이',info:info({menu:['김밥 4,000원','neighbor']})}
+  ],members([['가','분식집 추천해줘']]));
+  assert.deepEqual(parseCondition('분식집 추천해줘').wants,['분식']);
+  assert.deepEqual(result.items.map(item=>item.place.id),['snack']);
+});
 test('simple registered hours exclude a shop closed now; missing or complex hours remain unknown',()=>{
   const hours=value=>({info:info({hours:[value,'owner']})});
   const late=Date.parse('2026-10-08T13:00:00Z'); // 22:00 in Seoul
