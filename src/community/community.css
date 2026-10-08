@@ -451,3 +451,13 @@
 .post-menu-read{display:grid;gap:8px;margin:10px 0 4px}.post-menu-read>.button{justify-self:start}
 
 .place-detail-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.place-detail-actions .button{display:flex;flex-direction:column;gap:6px;white-space:normal;min-width:0;padding:16px}.place-detail-actions span{font-size:14px;font-weight:400}@media(max-width:420px){.place-detail-actions{grid-template-columns:1fr}}
+
+/* 로그인·사장님 신청 버튼 간격과 상태 표시 */
+.community .owner-card form>.button.dark{margin-top:6px}
+.community .owner-card form+.text-link{display:block;margin-top:18px}
+.owner-apply-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:8px}
+.owner-status{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:14px 18px;border-radius:18px;background:#fff;box-shadow:0 1px 2px #0000000a,0 4px 16px #00000008;font-size:14px;color:#555}
+.owner-status b{color:var(--ink)}
+.owner-status.pending{background:#fffbe8}
+.owner-status-dot{width:10px;height:10px;border-radius:50%;background:#f5b400;box-shadow:0 0 0 4px #f5b40033;animation:glow 2s ease-in-out infinite}
+.modal-back{display:inline-flex;align-items:center;gap:6px;margin:-4px 0 12px;padding:6px 12px 6px 8px!important;border-radius:999px;background:#7676801f!important;font-size:14px;font-weight:700;color:var(--ink)}

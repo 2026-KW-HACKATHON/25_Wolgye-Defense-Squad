@@ -80,7 +80,7 @@ export function openHours(text){
   return open>=0&&open<24&&close<=36?{open,close}:null;
 }
 
-const source=f=>`${f.role==='owner'?'사장님 확인':'이웃 정보'} ${f.observedAt}`;
+const source=f=>`${f.role==='owner'?'사장님 확인':f.role==='internet'?'인터넷 메뉴판':'이웃 정보'} ${f.observedAt}`;
 
 export function evaluate(place,condition){
   const fields=place.info?.fields||{};
