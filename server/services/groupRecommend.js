@@ -107,9 +107,16 @@ export function evaluate(place,condition){
   }
   if(condition.wants.length)checks.push(wantHits.length?{kind:'want',label:`원하는 것: ${wantHits.map(h=>h.word).join(', ')}`,status:'met',evidence:wantHits.map(h=>`${h.where}에 ‘${h.term}’`).join(' · ')}:{kind:'want',label:`원하는 것: ${condition.wants.join(', ')}`,status:'unmatched',evidence:'업종·메뉴·소식에서 관련 단어를 찾지 못했어요'});
   if(condition.budget){
-    const prices=menuPrices(menu),label=`예산 ${condition.budget.toLocaleString('ko-KR')}원`;
+    // 찾는 음식이 메뉴에 있으면 그 음식의 가격으로, 없으면 가장 싼 메뉴로 판단한다.
+    const pairs=[...menu.matchAll(/([가-힣A-Za-z][가-힣A-Za-z0-9 ()·&+]*?)\s*(\d{1,3}(?:,\d{3})+|\d{3,6})\s*원/g)].map(m=>({name:m[1].trim(),price:Number(m[2].replace(/,/g,''))}));
+    const terms=condition.wants.flatMap(expand),wanted=pairs.filter(x=>terms.some(t=>x.name.includes(t)));
+    const label=`예산 ${condition.budget.toLocaleString('ko-KR')}원`;
+    if(wanted.length){const best=wanted.reduce((a,b)=>a.price<=b.price?a:b);checks.push({kind:'budget',label,status:best.price<=condition.budget?'met':'violated',evidence:`${best.name} ${best.price.toLocaleString('ko-KR')}원 (${source(fields.menu)})`});}
+    else{
+    const prices=menuPrices(menu);
     if(!prices.length)checks.push({kind:'budget',label,status:'unknown',evidence:'등록된 메뉴 가격이 없어요'});
     else{const low=Math.min(...prices);checks.push(low<=condition.budget?{kind:'budget',label,status:'met',evidence:`${low.toLocaleString('ko-KR')}원 메뉴 있음 (${source(fields.menu)})`}:{kind:'budget',label,status:'violated',evidence:`가장 싼 메뉴 ${low.toLocaleString('ko-KR')}원 (${source(fields.menu)})`});}
+    }
   }
   if(condition.hour!==null&&condition.hour!==undefined){
     const hours=openHours(fields.hours?.value),label=`${condition.hour}시 방문`;

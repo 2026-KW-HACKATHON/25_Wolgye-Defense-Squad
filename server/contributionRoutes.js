@@ -2,6 +2,7 @@ import express from 'express';
 import {communityStore} from './services/communityStore.js';
 import {getCommunityPlaces,inDistrict} from './services/communityService.js';
 import {INFO_FIELDS,publicInfo} from './services/placeInfo.js';
+import {readMenuPhoto} from './services/llm.js';
 const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d&&d<=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
 export function createContributionRouter({store=communityStore,catalog=getCommunityPlaces,requireAccount=false,roleFor=async()=>'neighbor',onEarn=async()=>0,onRevoke=async()=>{}}={}) {
@@ -55,6 +56,21 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
       res.json({post,earned});
     }catch{res.status(502).json({error:'소식을 저장하지 못했어요. 다시 시도해 주세요.'});}
   }
+  // 메뉴판 사진 → 메뉴·가격 읽기. 저장하지 않고 결과만 돌려준다(사람이 확인한 뒤 가게 정보로 저장).
+  let menuReads=0,menuWindow=Date.now();
+  router.post('/places/:id/menu-photo',async(req,res)=>{
+    try{
+      if(Date.now()-menuWindow>3600000){menuWindow=Date.now();menuReads=0;}
+      if(menuReads++>=120)return res.status(429).json({error:'메뉴판 읽기 요청이 많아요. 잠시 후 다시 시도해 주세요.'});
+      const image=typeof req.body?.image==='string'?req.body.image:'';
+      const m=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image);
+      if(!m||Buffer.from(m[2],'base64').length>2*1024*1024)return res.status(400).json({error:'2MB 이하의 JPG·PNG·WebP 사진을 올려 주세요.'});
+      if(!(await catalog()).items.some(x=>x.id===req.params.id))return res.status(404).json({error:'가게를 찾지 못했어요.'});
+      const out=await readMenuPhoto(image);
+      const line=out.items.map(i=>`${i.name} ${i.price?i.price.toLocaleString('ko-KR')+'원':'(가격 확인 필요)'}`).join(' / ');
+      res.json({...out,text:[line,out.notes&&out.notes!=='메뉴판이 아님'?`(${out.notes})`:''].filter(Boolean).join(' ')});
+    }catch(e){res.status(e.status||502).json({error:e.status?e.message:'메뉴판을 읽지 못했어요. 다시 시도해 주세요.'});}
+  });
   router.put('/places/:id/info',async(req,res)=>{
     try{
       const b=req.body||{},fields={};

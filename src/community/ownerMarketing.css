@@ -2,3 +2,7 @@
 .place-stats-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}.place-stats-form label{display:grid;gap:6px}.place-stats-form input,.place-stats-form select{min-width:0;width:100%;border:1px solid #d5d9cd;border-radius:9px;padding:9px;font:inherit;background:#fff}.place-stats-form button{justify-self:start}@media(max-width:640px){.place-stats-form{grid-template-columns:1fr}}
 
 .owner-card .owner-admin-form{display:grid;gap:20px;margin:20px 0}.owner-admin-form label{min-width:0}.owner-admin-form input{box-sizing:border-box;min-width:0}.owner-admin-form>.button{position:static;margin:0;min-height:48px}.owner-admin-result{padding:16px;border-radius:12px;background:#f1f5e4;line-height:1.6}
+
+/* 포스터 (AI 홍보 대화·제안 검토) */
+.owner-poster{margin:12px 0}.owner-poster .button.full{width:100%;margin-top:6px}
+.owner-chat-msg{display:flex;flex-direction:column}.owner-chat-msg.user{align-items:flex-end}

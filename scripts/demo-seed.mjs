@@ -49,6 +49,7 @@ try{
       infos++;
     }
     let coupons=0;for(const c of await ownerMarketingStore.allCoupons())if(c.demo&&await ownerMarketingStore.removeCoupon(c.placeId,c.id))coupons++;
+    for(const c of await ownerMarketingStore.allPublicCampaigns())if(c.demo)await ownerMarketingStore.removeCampaign(c.placeId,c.id);
     console.log(`시연용 예시 삭제: 소식 ${posts}개, 가게 정보 ${infos}곳, 쿠폰 ${coupons}개`);
   }else{
     let infos=0,posts=0;

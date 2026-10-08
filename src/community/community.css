@@ -426,3 +426,22 @@
 .community .modal .button+.button.admin-danger{margin-left:14px!important}
 .community .rw-card .coupon{width:100%}
 .community .location-note{display:block;margin:14px 18px 16px!important;padding:0!important}
+
+/* 사장님 포스터: 카드 배지·표지, 가게 상세 */
+.promo-badge{display:inline-block;margin-bottom:6px;padding:4px 10px;border-radius:999px;background:var(--lime);color:var(--ink);font-size:12px;font-weight:800}
+.community .poster-cover{object-position:top}
+.detail-promo{margin:14px 0 18px}
+.detail-promo img{display:block;width:100%;max-width:420px;margin:0 auto;border-radius:18px;box-shadow:0 8px 24px #173d321f}
+.detail-promo small{display:block;text-align:center;margin-top:8px;color:var(--muted);font-size:12px}
+
+/* 메뉴판 사진으로 채우기 */
+.menu-photo-pick{display:grid!important;gap:4px;place-items:center;text-align:center;margin:14px 0;padding:18px;border-radius:18px;border:2px dashed #c9dd8a;background:#f8fde9;cursor:pointer}
+.menu-photo-pick input{display:none}
+.menu-photo-pick span{font-weight:800;font-size:16px}
+.menu-photo-pick small{color:var(--muted);font-weight:500}
+.menu-read-note{margin:-4px 0 10px;padding:10px 14px;border-radius:14px;background:var(--lime);font-weight:700;font-size:14px}
+
+/* 찾기: 예산·시간 판정 결과 */
+.price-checks{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.price-check{font-size:13px;font-weight:600;padding:6px 10px;border-radius:12px;background:#f2f2f7;color:var(--muted)}
+.price-check.met{background:#eef6d6;color:var(--ink)}
