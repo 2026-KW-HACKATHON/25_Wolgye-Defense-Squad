@@ -1185,13 +1185,21 @@ export function InstagramCarouselView({
   shopName,
   editable = false,
   onEdit,
-  className = ''
+  className = '',
+  initialIndex = 0,
+  onSlideChange
 }) {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [aspectRatio, setAspectRatio] = useState(carousel?.aspectRatio || '4:5');
   const [downloading, setDownloading] = useState(false);
   const [showEditDrawer, setShowEditDrawer] = useState(false);
   const [showImageSearch, setShowImageSearch] = useState(false);
+
+  useEffect(() => {
+    if (typeof initialIndex === 'number' && initialIndex >= 0) {
+      setActiveIndex(initialIndex);
+    }
+  }, [initialIndex]);
 
   if (!carousel || !Array.isArray(carousel.slides) || carousel.slides.length === 0) {
     return null;
@@ -1733,7 +1741,9 @@ export function InstagramCarouselView({
               aria-label="이전 슬라이드"
               onClick={e => {
                 e.stopPropagation();
-                setActiveIndex(i => Math.max(0, i - 1));
+                const next = Math.max(0, activeIndex - 1);
+                setActiveIndex(next);
+                onSlideChange?.(next);
               }}
               style={{
                 pointerEvents: 'auto',
@@ -1761,7 +1771,9 @@ export function InstagramCarouselView({
               aria-label="다음 슬라이드"
               onClick={e => {
                 e.stopPropagation();
-                setActiveIndex(i => Math.min(slides.length - 1, i + 1));
+                const next = Math.min(slides.length - 1, activeIndex + 1);
+                setActiveIndex(next);
+                onSlideChange?.(next);
               }}
               style={{
                 pointerEvents: 'auto',
@@ -1801,7 +1813,10 @@ export function InstagramCarouselView({
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => setActiveIndex(idx)}
+                  onClick={() => {
+                    setActiveIndex(idx);
+                    onSlideChange?.(idx);
+                  }}
                   style={{
                     width: idx === activeIndex ? '18px' : '6px',
                     height: '6px',

@@ -147,14 +147,27 @@ ${CAROUSEL_GUIDE}`;
     res.json({carousel,proposalId:proposal?.id});
   }catch(e){failure(res,e);}});
 
-  // 가게별 최신 포스터 및 캐러셀(주민 화면용)
+  // 가게별 최신 포스터 및 캐러셀(주민 화면용) + 가게별 전체 공개 콘텐츠 목록
   router.get('/public-campaigns',async(req,res)=>{try{
     const map={};
-    for(const c of await store.allPublicCampaigns())if((c.card||c.carousel)&&(!map[c.placeId]||c.updatedAt>map[c.placeId].updatedAt))map[c.placeId]={id:c.id,placeId:c.placeId,title:c.title,card:c.card,carousel:c.carousel,hasPoster:!!c.poster,demo:!!c.demo,updatedAt:c.updatedAt};
-    res.json({items:map});
+    const allByPlace={};
+    for(const c of await store.allPublicCampaigns()){
+      if(c.card||c.carousel){
+        const item={id:c.id,placeId:c.placeId,title:c.title,card:c.card,carousel:c.carousel,hasPoster:!!c.poster,demo:!!c.demo,updatedAt:c.updatedAt};
+        if(!map[c.placeId]||c.updatedAt>map[c.placeId].updatedAt){
+          map[c.placeId]=item;
+        }
+        if(!allByPlace[c.placeId]) allByPlace[c.placeId]=[];
+        allByPlace[c.placeId].push(item);
+      }
+    }
+    for(const k in allByPlace){
+      allByPlace[k].sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+    }
+    res.json({items:map, allByPlace});
   }catch(e){failure(res,e);}});
   router.get('/campaigns/:placeId/:id/poster',async(req,res)=>{const c=(await store.publicCampaigns(req.params.placeId)).find(x=>x.id===req.params.id);if(!c?.poster)return res.status(404).end();res.set('Cache-Control','public, max-age=300').type('png').send(Buffer.from(c.poster,'base64'));});
-  router.get('/campaigns/:placeId',async(req,res)=>{try{if(!await placeExists(req.params.placeId))return res.status(404).json({error:'가게를 찾지 못했어요.'});res.json({items:(await store.publicCampaigns(req.params.placeId)).map(({poster,...c})=>({...c,hasPoster:!!poster}))});}catch(e){failure(res,e);}});
+  router.get('/campaigns/:placeId',async(req,res)=>{try{if(!await placeExists(req.params.placeId))return res.status(404).json({error:'가게를 찾지 못했어요.'});const list=(await store.publicCampaigns(req.params.placeId)).map(({poster,...c})=>({...c,hasPoster:!!poster})).sort((a,b)=>new Date(b.updatedAt||0)-new Date(a.updatedAt||0));res.json({items:list});}catch(e){failure(res,e);}});
   router.get('/campaigns',owner,async(req,res)=>res.json({items:(await store.campaigns(req.owner.placeId)).map(({poster,...c})=>({...c,hasPoster:!!poster}))}));
   router.post('/campaigns',owner,async(req,res)=>{const title=clean(req.body?.title,100),body=clean(req.body?.body,1500),status=req.body?.status==='published'?'published':'draft',proposalId=clean(req.body?.proposalId,100);if(!title||!body)return res.status(400).json({error:'제목과 내용을 입력해 주세요.'});if(proposalId&&!(await store.proposals(req.owner.placeId)).some(p=>p.id===proposalId&&p.status==='approved'))return res.status(400).json({error:'승인한 콘텐츠만 캠페인에 연결할 수 있어요.'});const row=(await store.saveCampaign(req.owner.placeId,{title,body,status,proposalId},clean(req.body?.id,100)||undefined));if(!row)return res.status(404).json({error:'캠페인을 찾지 못했어요.'});res.json(row);});
   router.delete('/campaigns/:id',owner,async(req,res)=>res.status((await store.removeCampaign(req.owner.placeId,req.params.id))?200:404).json({ok:true}));
