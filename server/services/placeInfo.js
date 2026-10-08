@@ -9,7 +9,8 @@ export function applyInfoEdit(old,placeId,changes,editor){
     if(!INFO_FIELDS[key]||(row.fields[key]?.value||'')===value)continue;
     changed=true;
     row.history.push({field:key,before:row.fields[key]?.value||'',after:value,role:editor.role,author:editor.author,observedAt:editor.observedAt,updatedAt:now,editorHash:editor.editorHash});
-    if(value)row.fields[key]={value,role:editor.role,author:editor.author,observedAt:editor.observedAt,updatedAt:now};
+    // role: owner(사장님) | neighbor(이웃) | internet(인터넷 메뉴판 자동 수집, sourceUrl에 출처)
+    if(value)row.fields[key]={value,role:editor.role,author:editor.author,observedAt:editor.observedAt,updatedAt:now,...(editor.sourceUrl?{sourceUrl:editor.sourceUrl}:{})};
     else delete row.fields[key];
   }
   row.history=row.history.slice(-50);

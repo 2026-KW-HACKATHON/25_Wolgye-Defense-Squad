@@ -71,3 +71,7 @@ ALTER TABLE wolgye.discord_memberships ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON ALL TABLES IN SCHEMA wolgye FROM PUBLIC;
 -- Supabase postgres connection owns these tables. No browser/anonymous policies.
 COMMIT;
+
+CREATE TABLE IF NOT EXISTS wolgye.menu_reviews(id text PRIMARY KEY,data jsonb NOT NULL);
+ALTER TABLE wolgye.menu_reviews ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON wolgye.menu_reviews FROM PUBLIC;

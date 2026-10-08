@@ -98,7 +98,7 @@ export function openingStatus(place,{at=Date.now(),visitHour=null}={}){
   return time>=range.open&&time<range.close?'open':'closed';
 }
 
-const source=f=>`${f.role==='owner'?'사장님 확인':'이웃 정보'} ${f.observedAt}`;
+const source=f=>`${f.role==='owner'?'사장님 확인':f.role==='internet'?'인터넷 메뉴판':'이웃 정보'} ${f.observedAt}`;
 
 export function evaluate(place,condition){
   const fields=place.info?.fields||{};

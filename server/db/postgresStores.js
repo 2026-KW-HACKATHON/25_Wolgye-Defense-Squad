@@ -30,6 +30,7 @@ export function createPostgresCommunityStore(pool){
     contributionStats:async token=>contributionStats({posts:await rows('posts'),places:await rows('places'),infos:Object.fromEntries((await pool.query('SELECT id,data FROM wolgye.place_info')).rows.map(r=>[r.id,r.data])),token,hash}),
     placeInfo:async()=>Object.fromEntries((await pool.query('SELECT id,data FROM wolgye.place_info')).rows.map(r=>[r.id,r.data])),
     savePlaceInfo:(placeId,changes,editor)=>transaction(pool,async c=>{
+      await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[placeId]);
       const old=(await c.query('SELECT data FROM wolgye.place_info WHERE id=$1 FOR UPDATE',[placeId])).rows[0]?.data;
       const row=applyInfoEdit(old,placeId,changes,editor);if(!row)return null;
       await c.query('INSERT INTO wolgye.place_info(id,data) VALUES ($1,$2) ON CONFLICT(id) DO UPDATE SET data=excluded.data',[placeId,row]);return row;
