@@ -41,3 +41,8 @@
 .studio-history-card{background:#ffffff;border:1px solid #e2e8f0;border-radius:16px;padding:16px;box-shadow:0 3px 10px rgba(0,0,0,0.03);overflow:hidden}
 .button.small{padding:5px 10px;font-size:12px}
 
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-spinner{display:inline-block;width:16px;height:16px;border:2px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:middle}
+.loading-spinner.lg{width:28px;height:28px;border-width:3px}
+.loading-spinner.muted{border-color:#cbd5e1;border-top-color:#64748b}
+

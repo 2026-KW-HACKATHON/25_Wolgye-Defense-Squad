@@ -42,44 +42,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const [format,setFormat]=useState('square');
   const [proposals,setProposals]=useState([]);
   const [preview,setPreview]=useState({});
-  const [generatingStep,setGeneratingStep]=useState(0);
-  const [currentStepInfo,setCurrentStepInfo]=useState(null);
-  const stepTimer=useRef(null);
-
-  const deriveStepsForContext=(taskText, actionType='visual')=>{
-    const text=String(taskText||'');
-    const celebMatch=text.match(/(카리나|뉴진스|아이유|차은우|성시경|백종원|풍자|이영자|유재석|쯔양|침착맨|안성재|최현석|[가-힣]{2,4}\s*(?:아이돌|배우|가수|연예인))/);
-    const celebName=celebMatch?celebMatch[1]:'화제의 미식 셀럽';
-    const isCeleb=Boolean(celebMatch);
-
-    const foodMatch=text.match(/(삼겹살|제육|돈까스|돈가스|치킨|피자|국밥|김치찌개|된장찌개|파스타|스테이크|초밥|스시|회|마라탕|떡볶이|냉면|라면|우동|칼국수|커피|디저트|베이커리|빵|샌드위치|샐러드)/);
-    const foodName=foodMatch?foodMatch[1]:'시그니처 대표 메뉴';
-
-    if(actionType==='chat'){
-      return [
-        {icon:'💬',text:'1단계: 사장님 홍보 고민 및 마케팅 맥락 분석 중'},
-        {icon:'💡',text:'2단계: 골목 상권 맞춤 카피라이팅 조언 작성 중'}
-      ];
-    }
-
-    const isPoster=/(포스터|단일\s*포스터|할인\s*포스터)/i.test(text);
-
-    if(isPoster){
-      return [
-        {icon:'🎯',text:`1단계: 사장님 대화 분석 ("${text.slice(0,20)}...") 기획 중`},
-        {icon:'✍️',text:`2단계: [${foodName}] 혜택 카피라이팅 & 핵심 헤드라인 문구 작성 중`},
-        {icon:'📸',text:`3단계: [${foodName}] 고화질 실사 사진 웹 검색 및 배경 검증 중`},
-        {icon:'🎨',text:`4단계: 상업용 포스터 레이아웃 완성 & 히스토리 보관 중`}
-      ];
-    }
-
-    return [
-      {icon:'🎯',text:`1단계: 대화 내역 분석 및 ${isCeleb ? `${celebName} 출연 ` : ''}[${foodName}] 카드뉴스 기획 중`},
-      {icon:'✍️',text:`2단계: 슬라이드별 훅(Hook) & ${isCeleb ? `${celebName} 추천 멘트` : '방문 유도 카피'} 작성 중`},
-      {icon:'📸',text:`3단계: ${isCeleb ? `${celebName} 실사 사진 & ` : ''}[${foodName}] 웹 사진 검색 및 적합성 검증 중`},
-      {icon:'🎨',text:`4단계: 인스타그램 4:5 피드 규격 비주얼 바인딩 완성 & 히스토리 보관 중`}
-    ];
-  };
+  const [busyAction,setBusyAction]=useState(null); // 'chat' | 'visual' | null
 
   // 캠페인 & 키워드 & 쿠폰 & 리포트 & 배달앱 링크
   const [campaigns,setCampaigns]=useState([]);
@@ -95,30 +58,18 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const previewUrls=useRef([]);
   const selectedPlace=places.find(p=>p.id===placeId);
 
-  const run=async (work, contextPrompt='', actionType='visual')=>{
+  const run=async (work, actionType='visual')=>{
     setBusy(true);
+    setBusyAction(actionType);
     setError('');
     setNotice('');
-    const steps=deriveStepsForContext(contextPrompt||message||brief, actionType);
-    setGeneratingStep(1);
-    setCurrentStepInfo(steps[0]);
-    let s=1;
-    clearInterval(stepTimer.current);
-    const intervalTime=actionType==='chat'?1000:1800;
-    stepTimer.current=setInterval(()=>{
-      s=(s%steps.length)+1;
-      setGeneratingStep(s);
-      setCurrentStepInfo(steps[s-1]);
-    },intervalTime);
     try{
       await work();
     }catch(e){
       setError(e.message);
     }finally{
-      clearInterval(stepTimer.current);
-      setGeneratingStep(0);
-      setCurrentStepInfo(null);
       setBusy(false);
+      setBusyAction(null);
     }
   };
 
@@ -154,7 +105,6 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   },[]);
 
   useEffect(()=>()=>{
-    clearInterval(stepTimer.current);
     for(const url of previewUrls.current)URL.revokeObjectURL(url);
   },[]);
 
@@ -531,18 +481,16 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                 </div>
               </div>
 
-              {/* 진행 상태 인디케이터 (상단 전체 진행 바) */}
-              {generatingStep>0&&currentStepInfo&&(
-                <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:'12px',padding:'12px 18px',margin:'14px 0',boxShadow:'0 2px 8px rgba(37,99,235,0.08)'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-                    <span style={{fontWeight:800,fontSize:'14px',color:'#1e40af'}}>
-                      {currentStepInfo.icon} {currentStepInfo.text}
-                    </span>
-                    <span style={{fontSize:'12px',fontWeight:700,color:'#2563eb'}}>진행 중 ({generatingStep}/4)</span>
-                  </div>
-                  <div style={{width:'100%',background:'#dbeafe',borderRadius:'99px',height:'8px',overflow:'hidden'}}>
-                    <div style={{width:`${generatingStep*25}%`,background:'linear-gradient(90deg, #3b82f6, #1d4ed8)',height:'100%',transition:'width 0.4s ease',borderRadius:'99px'}}/>
-                  </div>
+              {/* 상단 로딩 표시 (진행 중 / 제작 중) */}
+              {busy&&(
+                <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:'12px',padding:'12px 18px',margin:'14px 0',display:'flex',alignItems:'center',gap:'12px',boxShadow:'0 2px 8px rgba(37,99,235,0.06)'}}>
+                  <span className="loading-spinner"/>
+                  <span style={{fontWeight:700,fontSize:'14px',color:'#1e40af'}}>
+                    {busyAction==='chat'?'답변을 준비하고 있어요...':'홍보 콘텐츠를 제작하고 있어요...'}
+                  </span>
+                  <span style={{marginLeft:'auto',fontSize:'12px',color:'#2563eb',fontWeight:700}}>
+                    {busyAction==='chat'?'진행 중':'제작 중'}
+                  </span>
                 </div>
               )}
 
@@ -595,18 +543,12 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                         </ul>
                       </div>
                     )}
-                    {/* 채팅 창 내부 실시간 진행 상태 카드 */}
-                    {busy&&currentStepInfo&&(
+                    {/* 채팅 창 내부 실시간 로딩 카드 */}
+                    {busy&&(
                       <div className="owner-chat-msg assistant">
-                        <div style={{background:'#ffffff',border:'1.5px solid #93c5fd',borderRadius:'15px',padding:'12px 16px',boxShadow:'0 2px 8px rgba(59,130,246,0.1)'}}>
-                          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'6px'}}>
-                            <span style={{fontSize:'16px'}}>{currentStepInfo.icon}</span>
-                            <span style={{fontWeight:800,fontSize:'13px',color:'#1e40af'}}>AI 실시간 작업 중...</span>
-                            <span style={{fontSize:'11px',color:'#3b82f6',fontWeight:700,marginLeft:'auto'}}>단계 {generatingStep}/4</span>
-                          </div>
-                          <p style={{margin:0,fontSize:'12.5px',color:'#334155',fontWeight:600}}>
-                            {currentStepInfo.text}
-                          </p>
+                        <div style={{display:'inline-flex',alignItems:'center',gap:'8px',background:'#ffffff',border:'1px solid #e2e8f0',padding:'10px 16px',borderRadius:'16px',color:'#334155',fontSize:'13px',fontWeight:600,boxShadow:'0 2px 8px rgba(0,0,0,0.04)'}}>
+                          <span className="loading-spinner"/>
+                          <span>{busyAction==='chat'?'답변을 작성하고 있어요...':'홍보 콘텐츠를 제작하고 있어요...'}</span>
                         </div>
                       </div>
                     )}
@@ -707,20 +649,12 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                   </div>
 
                   <div className="studio-viewer-box">
-                    {/* 비주얼 스튜디오 화면 내 실시간 상황별 진행 단계 표시 */}
-                    {busy&&currentStepInfo&&(
-                      <div style={{background:'#ffffff',border:'2px solid #3b82f6',borderRadius:'16px',padding:'16px 20px',marginBottom:'14px',boxShadow:'0 4px 16px rgba(59,130,246,0.15)'}}>
-                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
-                          <span style={{fontSize:'14px',fontWeight:800,color:'#1e40af'}}>
-                            {currentStepInfo.icon} {currentStepInfo.text}
-                          </span>
-                          <span style={{background:'#eff6ff',color:'#2563eb',padding:'3px 8px',borderRadius:'99px',fontSize:'11px',fontWeight:800}}>
-                            비주얼 렌더링 {generatingStep}/4
-                          </span>
-                        </div>
-                        <div style={{width:'100%',background:'#dbeafe',borderRadius:'99px',height:'6px',overflow:'hidden'}}>
-                          <div style={{width:`${generatingStep*25}%`,background:'linear-gradient(90deg, #3b82f6, #1d4ed8)',height:'100%',transition:'width 0.4s ease'}}/>
-                        </div>
+                    {/* 비주얼 스튜디오 화면 내 실시간 제작 중 표시 */}
+                    {busy&&busyAction==='visual'&&(
+                      <div style={{background:'#ffffff',border:'1.5px dashed #93c5fd',borderRadius:'16px',padding:'24px 20px',marginBottom:'14px',textAlign:'center',boxShadow:'0 2px 8px rgba(37,99,235,0.06)'}}>
+                        <div className="loading-spinner lg" style={{marginBottom:'10px'}}/>
+                        <p style={{margin:0,fontWeight:800,color:'#1e40af',fontSize:'15px'}}>홍보 콘텐츠 제작 중...</p>
+                        <span style={{fontSize:'12px',color:'#64748b',marginTop:'4px',display:'block'}}>AI가 고화질 비주얼과 카피를 완성하고 있어요</span>
                       </div>
                     )}
 
