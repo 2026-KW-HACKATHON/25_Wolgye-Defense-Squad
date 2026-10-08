@@ -40,10 +40,13 @@ export function cleanCarousel(data){
   const rawSlides=Array.isArray(data.slides)?data.slides:[];
   const slides=rawSlides.map((s,i)=>cleanSlide(s,i)).filter(Boolean).slice(0,7);
   if(!slides.length)return null;
+  const rawTags=Array.isArray(data.hashtags)?data.hashtags:(typeof data.hashtags==='string'?data.hashtags.split(/\s+/):[]);
+  const hashtags=rawTags.map(t=>String(t||'').trim().replace(/^#/,'')).filter(Boolean).slice(0,10).map(t=>`#${t}`);
   return {
     concept:text(data.concept||data.title,60)||'인스타그램 홍보 카드뉴스',
     theme:THEMES.includes(data.theme)?data.theme:'warm',
     aspectRatio:data.aspectRatio==='4:5'?'4:5':'1:1',
+    hashtags:hashtags.length?hashtags:['#월계동맛집','#골목맛집','#학생할인'],
     slides
   };
 }
@@ -59,6 +62,7 @@ export const CAROUSEL_GUIDE=`인스타그램 캐러셀(슬라이드 4~5장 카�
   "concept": "카드뉴스 전체 기획 콘셉트 (예: 월계동 숨은 맛집의 화제 미식 스토리)",
   "theme": "warm",
   "aspectRatio": "4:5",
+  "hashtags": ["#월계동맛집", "#여대생할인", "#가성비맛집", "#광운대맛집", "#골목식당"],
   "slides": [
     {
       "type": "cover",
