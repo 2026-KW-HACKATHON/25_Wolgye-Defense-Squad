@@ -22,7 +22,7 @@ const readFile=file=>new Promise((resolve,reject)=>{
   reader.onerror=reject;
   reader.readAsDataURL(file);
 });
-export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved}){
+export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved,onCampaignPublished}){
   const [token,setToken]=useState('account');
   const [placeId,setPlaceId]=useState('');
   const [section,setSection]=useState('studio'); // 'studio' (통합 AI 홍보 스튜디오)
@@ -136,10 +136,11 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
 
   // 2. 논문 기반 One-Pass 확정 정형화 생성 (대화 내역 100% 반영 + 실사 검색 매칭 + 히스토리 자동 보관)
   async function synthesizeVisual(type='carousel',customBrief=''){
-    const userText=customBrief||message.trim()||brief.trim();
+    const lastUserChat=[...chat].reverse().find(x=>x.role==='user')?.content||'';
+    const userText=customBrief||message.trim()||lastUserChat||'';
     const defaultBrief=type==='card'
-      ?'사장님 대화 내역을 바탕으로 매력적인 상업용 단일 포스터 제작'
-      :`${selectedPlace?.name||'우리 가게'} 대표 매력과 대화 내역을 담은 인스타그램 4:5 캐러셀 카드뉴스`;
+      ?(userText||'사장님 대화 내역을 바탕으로 매력적인 상업용 단일 포스터 제작')
+      :(userText||`${selectedPlace?.name||'우리 가게'} 대표 매력과 대화 내역을 담은 인스타그램 4:5 캐러셀 카드뉴스`);
     const promptBrief=userText||defaultBrief;
     const history=chat.map(x=>({role:x.role,content:x.content}));
 
@@ -235,32 +236,80 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   // 현재 활성화된 비주얼(캐러셀 or 단일 포스터) 즉시 게시
   async function quickPublishActive(){
     if(!activeVisual?.data)return;
+    const targetPlaceId=selectedPlace?.id||placeId;
     await run(async()=>{
+      let publishedItem=null;
       if(activeVisual.type==='carousel'){
         const carousel=activeVisual.data;
         const coverPng=await generateCarouselSlideBase64(carousel.slides[0],0,carousel.slides.length,carousel,selectedPlace?.name);
-        await api('/quick-publish',{method:'POST',body:{carousel,image:coverPng||undefined}});
+        const res=await api('/quick-publish',{method:'POST',body:{carousel,image:coverPng||undefined}});
+        publishedItem=res.campaign||{
+          id:crypto.randomUUID(),
+          placeId:targetPlaceId,
+          title:carousel.concept||'인스타 카드뉴스',
+          carousel,
+          hasPoster:!!coverPng,
+          updatedAt:new Date().toISOString()
+        };
         setCampaigns((await api('/campaigns')).items);
         setNotice('🎉 인스타그램 캐러셀 소식을 게시했어요! 주민 화면 가게 카드에 바로 보입니다.');
       }else{
         const card=activeVisual.data;
         const image=generatePromoImageBase64(card,selectedPlace?.name);
         const {bgImage,...clean}=card;
-        await api('/quick-publish',{method:'POST',body:{card:clean,image}});
+        const res=await api('/quick-publish',{method:'POST',body:{card:clean,image}});
+        publishedItem=res.campaign||{
+          id:crypto.randomUUID(),
+          placeId:targetPlaceId,
+          title:card.title||'사장님 홍보 포스터',
+          card:clean,
+          hasPoster:!!image,
+          updatedAt:new Date().toISOString()
+        };
         setCampaigns((await api('/campaigns')).items);
         setNotice('🎉 포스터를 게시했어요. 주민 화면의 가게 카드와 상세 화면에 바로 보여요.');
+      }
+
+      // 게시 즉시 로컬 스토리지에 영구 저장 (상세 페이지에서 0ms 로딩 보장)
+      if(publishedItem&&targetPlaceId){
+        try{
+          const storageKey=`place_campaigns_${targetPlaceId}`;
+          const stored=JSON.parse(localStorage.getItem(storageKey)||'[]');
+          const updated=[publishedItem,...stored.filter(x=>x.id!==publishedItem.id)];
+          localStorage.setItem(storageKey,JSON.stringify(updated));
+          onCampaignPublished?.(targetPlaceId,publishedItem,updated);
+        }catch{}
       }
     });
   }
 
   async function quickPublish(card){
     if(!card)return;
+    const targetPlaceId=selectedPlace?.id||placeId;
     await run(async()=>{
       const image=generatePromoImageBase64(card,selectedPlace?.name);
       const {bgImage,...clean}=card;
-      await api('/quick-publish',{method:'POST',body:{card:clean,image}});
+      const res=await api('/quick-publish',{method:'POST',body:{card:clean,image}});
+      const publishedItem=res.campaign||{
+        id:crypto.randomUUID(),
+        placeId:targetPlaceId,
+        title:card.title||'사장님 홍보 포스터',
+        card:clean,
+        hasPoster:!!image,
+        updatedAt:new Date().toISOString()
+      };
       setCampaigns((await api('/campaigns')).items);
       setNotice('🎉 포스터를 게시했어요. 주민 화면의 가게 카드와 상세 화면에 바로 보여요.');
+
+      if(targetPlaceId){
+        try{
+          const storageKey=`place_campaigns_${targetPlaceId}`;
+          const stored=JSON.parse(localStorage.getItem(storageKey)||'[]');
+          const updated=[publishedItem,...stored.filter(x=>x.id!==publishedItem.id)];
+          localStorage.setItem(storageKey,JSON.stringify(updated));
+          onCampaignPublished?.(targetPlaceId,publishedItem,updated);
+        }catch{}
+      }
     });
   }
 

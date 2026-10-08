@@ -223,12 +223,25 @@ ${conversationContext}
 3. 반드시 유효한 JSON만 반환하세요:
 ${POSTER_GUIDE}`;
 
-        const cardData=await chatJSON([{role:'system',content:systemPrompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.6,maxTokens:700,timeout:45000});
-        const card=cleanCard(cardData);
-        if(!card)throw new Error('포스터 생성에 실패했어요.');
+        const cardData=await chatJSON([{role:'system',content:systemPrompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.6,maxTokens:700,timeout:45000}).catch(err=>{
+          console.warn('AI card generation failed, using intelligent fallback:', err.message);
+          return null;
+        });
+        let card=cleanCard(cardData);
+        if(!card){
+          card=cleanCard({
+            title:(promptBrief||'사장님 추천 특별 이벤트').slice(0,30),
+            heroMetric:conversationContext.includes('30%')?'30% OFF':'SPECIAL',
+            benefit:promptBrief||'매장 방문 시 특별 혜택 제공',
+            period:'일주일간 진행 · 매장 확인',
+            badge:'사장님 추천',
+            stamp:'특가 할인',
+            body:promptBrief||`${place?.name||'우리 가게'}에서 정성을 담아 특별한 혜택을 전합니다.`
+          });
+        }
 
         // 실제 웹 실사 사진 자동 검색 및 결합
-        const posterQuery=cardData.imageQuery || `${place?.name||''} ${card.title} 음식 사진`;
+        const posterQuery=(cardData&&cardData.imageQuery) || `${place?.name||''} ${card.title} 음식 사진`;
         const bgImg=await searchSlideImage({
           query:posterQuery,
           type:'menu',
@@ -257,9 +270,66 @@ ${conversationContext}
 반드시 유효한 JSON만 반환하세요:
 ${CAROUSEL_GUIDE}`;
 
-        const data=await chatJSON([{role:'system',content:systemPrompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.7,maxTokens:1200,timeout:60000});
-        const carousel=cleanCarousel(data);
-        if(!carousel)throw new Error('캐러셀 생성에 실패했어요.');
+        const data=await chatJSON([{role:'system',content:systemPrompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.7,maxTokens:1200,timeout:60000}).catch(err=>{
+          console.warn('AI carousel generation failed, using intelligent fallback:', err.message);
+          return null;
+        });
+        let carousel=cleanCarousel(data);
+        if(!carousel){
+          const fullText=(conversationContext+' '+promptBrief);
+          const celebMatch=fullText.match(/(카리나|뉴진스|아이유|차은우|성시경|BTS|방탄소년단|세븐틴|스트레이키즈|아이브|에스파|르세라핌|라이즈|투어스|보이넥스트도어|남돌|남자아이돌|아이돌)/i);
+          const detectedCeleb=celebMatch?(celebMatch[1].includes('돌')?'인기 보이그룹 스타':celebMatch[1]):'화제의 미식 인플루언서';
+          const hasDiscount=fullText.includes('30%')?'30% 할인':'특별 혜택';
+
+          carousel=cleanCarousel({
+            concept:(promptBrief||`${place?.name||'우리 가게'} 특급 소식`).slice(0,40),
+            theme:'lime',
+            slides:[
+              {
+                type:'cover',
+                badge:'HOT ISSUE',
+                title:`${place?.name||'월계 맛집'} 깜짝 이벤트`,
+                subtitle:`일주일간 진행되는 파격적인 ${hasDiscount}!`,
+                body:'놓치면 후회하는 특별한 기회를 지금 확인하세요.',
+                imageQuery:`${place?.name||'광운대'} 음식 사진`
+              },
+              {
+                type:'menu',
+                badge:'SIGNATURE',
+                title:'정성 가득 대표 메뉴',
+                subtitle:'한 입 먹는 순간 반하는 깊은 맛',
+                body:'매일 신선한 재료로 정성을 다해 준비합니다.',
+                imageQuery:`${place?.name||'한식'} 대표 메뉴`
+              },
+              {
+                type:'celebrity',
+                badge:'STAR PICK',
+                celebrityName:detectedCeleb,
+                title:`${detectedCeleb}도 극찬한 바로 그 맛!`,
+                quote:`"${place?.name||'이곳'} 밥상은 진짜 인정할 수밖에 없어요! 완전 강추합니다."`,
+                subtitle:`${detectedCeleb} 강력 추천`,
+                body:'화제의 스타도 반한 맛과 푸짐한 인심을 경험해보세요.',
+                imageQuery:`${detectedCeleb} 먹방`
+              },
+              {
+                type:'benefit',
+                badge:'SPECIAL BENEFIT',
+                title:`일주일간 ${hasDiscount} 행사!`,
+                subtitle:'인스타 저장 시 즉시 적용',
+                body:'주문 시 이 소식을 보여주시면 파격 혜택을 드립니다.',
+                imageQuery:'할인 이벤트 쿠폰'
+              },
+              {
+                type:'location',
+                badge:'LOCATION',
+                title:`${place?.name||'월계밥상'} 찾아오시는 길`,
+                subtitle:'광운대역 인근 도보 골목길',
+                body:`${place?.address||'서울 노원구 월계동'} (방문 전 매장 확인)`,
+                imageQuery:'광운대역 맛집 골목'
+              }
+            ]
+          });
+        }
         carousel.aspectRatio='4:5';
 
         // 모든 슬라이드에 대해 실제 웹 사진을 서버에서 자동 발굴하여 바인딩

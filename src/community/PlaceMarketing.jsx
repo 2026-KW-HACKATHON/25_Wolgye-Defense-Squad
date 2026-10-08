@@ -16,9 +16,26 @@ export function recordPlaceView(placeId, profile) {
 }
 
 export default function PlaceMarketing({ placeId, shopName, initialCampaigns = [] }) {
-  const [items, setItems] = useState(initialCampaigns);
+  const [items, setItems] = useState(() => {
+    if (Array.isArray(initialCampaigns) && initialCampaigns.length > 0) return initialCampaigns;
+    try {
+      const stored = localStorage.getItem(`place_campaigns_${placeId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
+  });
   const [activeCarouselIdx, setActiveCarouselIdx] = useState(0);
   const [slideNavIdx, setSlideNavIdx] = useState(0);
+
+  // 상위에서 전달된 캠페인 배열이 갱신되면 즉시 반영
+  useEffect(() => {
+    if (Array.isArray(initialCampaigns) && initialCampaigns.length > 0) {
+      setItems(initialCampaigns);
+    }
+  }, [initialCampaigns]);
 
   useEffect(() => {
     let live = true;
@@ -28,6 +45,7 @@ export default function PlaceMarketing({ placeId, shopName, initialCampaigns = [
         .then(d => {
           if (live && Array.isArray(d.items)) {
             setItems(d.items);
+            try { localStorage.setItem(`place_campaigns_${placeId}`, JSON.stringify(d.items)); } catch {}
           }
         })
         .catch(() => {});

@@ -119,9 +119,39 @@ export default function CommunityApp(){
  }
  useEffect(()=>{navigator.permissions?.query({name:'geolocation'}).then(permission=>{if(permission.state==='granted')requestLocation();}).catch(()=>{});},[]);
  // 사장님이 게시한 최신 포스터(가게별). 카드 배지·표지와 가게 상세 맨 위에 쓴다.
- const [promos,setPromos]=useState({});
- const [promosAll,setPromosAll]=useState({});
- useEffect(()=>{const load=()=>fetch('/api/owner/public-campaigns').then(r=>r.json()).then(d=>{setPromos(d.items||{});setPromosAll(d.allByPlace||{});}).catch(()=>{});load();const t=setInterval(()=>{if(document.visibilityState==='visible')load();},30000);return()=>clearInterval(t);},[]);
+ const [promos,setPromos]=useState(()=>{
+  try{
+   const cached={};
+   for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('place_campaigns_')){
+     const pId=k.replace('place_campaigns_','');
+     const list=JSON.parse(localStorage.getItem(k)||'[]');
+     if(Array.isArray(list)&&list.length>0) cached[pId]=list[0];
+    }
+   }
+   return cached;
+  }catch{return {};}
+ });
+ const [promosAll,setPromosAll]=useState(()=>{
+  try{
+   const cached={};
+   for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith('place_campaigns_')){
+     const pId=k.replace('place_campaigns_','');
+     const list=JSON.parse(localStorage.getItem(k)||'[]');
+     if(Array.isArray(list)&&list.length>0) cached[pId]=list;
+    }
+   }
+   return cached;
+  }catch{return {};}
+ });
+ const handleCampaignPublished=(pId,newCampaign,allCampaigns)=>{
+  setPromos(prev=>({...prev,[pId]:newCampaign}));
+  setPromosAll(prev=>({...prev,[pId]:allCampaigns||[newCampaign,...(prev[pId]||[])]}));
+ };
+ useEffect(()=>{const load=()=>fetch('/api/owner/public-campaigns').then(r=>r.json()).then(d=>{if(d.items)setPromos(prev=>({...prev,...d.items}));if(d.allByPlace){setPromosAll(prev=>{const merged={...prev,...d.allByPlace};Object.entries(merged).forEach(([pId,list])=>{try{localStorage.setItem(`place_campaigns_${pId}`,JSON.stringify(list));}catch{}});return merged;});}}).catch(()=>{});load();const t=setInterval(()=>{if(document.visibilityState==='visible')load();},30000);return()=>clearInterval(t);},[]);
  const posterUrl=promo=>`/api/owner/campaigns/${encodeURIComponent(promo.placeId)}/${promo.id}/poster`;
  const deliveryOf=p=>places.find(x=>x.id===p.id)?.deliveryLinks||p.deliveryLinks||{};
  const saved=id=>state.saved.includes(id);
@@ -176,7 +206,7 @@ export default function CommunityApp(){
   </>}
  {tab==='explore'&&<Discovery places={places} posts={sharedPosts} saved={state.saved} user={user} onLogin={()=>{setLoginNext(null);setModalRaw({type:'login'});}} onPlace={detail} onAdd={()=>setModal({type:'newPlace'})} onContribute={id=>setModal({type:'editInfo',id})}/>}
  {tab==='groups'&&<Groups nickname={name} userLocation={userLocation} locating={locating} locationError={locationError} onLocate={requestLocation}/>}
- {tab==='owner'&&<OwnerMarketing places={places} admin={!!me?.admin} onBack={()=>go('news')} onLinksSaved={()=>loadPlaces(true)}/>}
+ {tab==='owner'&&<OwnerMarketing places={places} admin={!!me?.admin} onBack={()=>go('news')} onLinksSaved={()=>loadPlaces(true)} onCampaignPublished={handleCampaignPublished}/>}
  {tab==='reward'&&<Reward onExplore={()=>go('explore')} onCompose={()=>setModal({type:'post'})}/>}
  {tab==='profile'&&<><div className="page-heading"><div className="badge-title"><h1>반가워요, <mark className="hl">{name}</mark></h1><span className="title-badge">{me?.admin?'관리자':me?.ownerPlaceId?'사장님':'이웃'}</span></div></div><div className="profile-layout"><section className="profile-box"><UserRound size={42}/><h2>{name}</h2>{user&&<p className="muted">{user.email}{me?.admin?' · 관리자':''}{[user.user_metadata?.ageGroup,user.user_metadata?.gender].filter(Boolean).map(x=>' · '+x).join('')}</p>}<button className="button outline" onClick={()=>setModal({type:'profile'})}>프로필 수정</button><button className="settings-row" onClick={()=>setModal({type:'settings'})}><Settings size={19}/>설정<ChevronRight size={18}/></button><button className="settings-row" onClick={()=>setModal({type:'visits'})}><Map size={19}/>내 방문 기록 보기<ChevronRight size={18}/></button><button className="settings-row reward-row" onClick={()=>go('reward')}><span className="reward-row-cat">🐱</span>골목냥 키우기<ChevronRight size={18}/></button><button className="settings-row" onClick={()=>go('owner')}><House size={19}/>{me?.admin?'사장님 공간 · 승인 관리':'사장님 공간'}<ChevronRight size={18}/></button><button className="settings-row" onClick={logout}><LogOut size={19}/>로그아웃<ChevronRight size={18}/></button></section><div><h2 className="section-title">내가 쓴 이야기</h2>{[...sharedPosts.filter(p=>p.mine),...(state.posts||[])].length===0?<p className="muted">아직 작성한 소식이 없어요.</p>:[...sharedPosts.filter(p=>p.mine),...(state.posts||[])].map(p=><div className="my-post" key={p.id}><div><b>{p.title}</b><small>{p.observedAt||p.date} · {p.mine?'공유 중':'이전 브라우저 기록'}</small></div><button className="text-link" onClick={()=>setModal({type:'post',post:p})}>수정</button><button className="icon-button" aria-label={`${p.title} 삭제`} onClick={()=>setModal({type:'delete',post:p})}><Trash2 size={17}/></button></div>)}<h2 className="section-title">저장한 가게 <span>{state.saved.length}</span></h2><div className="places-grid saved-grid">{places.filter(p=>saved(p.id)).map(p=><React.Fragment key={p.id}>{placeCard(p,true)}</React.Fragment>)}</div>{!state.saved.length&&<p className="muted">가게의 북마크를 눌러 여기에 모아보세요.</p>}</div></div></>}
  <footer className="page-footer"><span>월계밥상 <b>✦</b></span><button className="text-link" onClick={()=>go('owner')}>사장님 공간</button><p>작은 발견이 모여, 더 가까운 동네.</p><small>카카오 장소 정보 · NVIDIA Nemotron AI 답변 · 모임·장소·소식은 함께 공유 · 저장·방문 메모는 로그인 계정에 저장</small></footer>

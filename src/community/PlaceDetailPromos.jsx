@@ -5,12 +5,27 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 export default function PlaceDetailPromos({ placeId, shopName, defaultPromo, allPromos = [] }) {
   const [promosList, setPromosList] = useState(() => {
     if (allPromos && allPromos.length > 0) return allPromos;
-    return defaultPromo ? [defaultPromo] : [];
+    if (defaultPromo) return [defaultPromo];
+    try {
+      const stored = localStorage.getItem(`place_campaigns_${placeId}`);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [];
   });
   const [activePosterIndex, setActivePosterIndex] = useState(0);
   const containerRef = useRef(null);
   const touchStartY = useRef(0);
   const lastWheelTime = useRef(0);
+
+  // 상위에서 전달된 포스터/캠페인 목록이 갱신되면 즉시 반영
+  useEffect(() => {
+    if (Array.isArray(allPromos) && allPromos.length > 0) {
+      setPromosList(allPromos);
+    }
+  }, [allPromos]);
 
   // 실시간 최신 목록 조회 및 동기화
   useEffect(() => {
@@ -21,6 +36,7 @@ export default function PlaceDetailPromos({ placeId, shopName, defaultPromo, all
         .then(d => {
           if (isMounted && Array.isArray(d.items) && d.items.length > 0) {
             setPromosList(d.items);
+            try { localStorage.setItem(`place_campaigns_${placeId}`, JSON.stringify(d.items)); } catch {}
           }
         })
         .catch(() => {});
