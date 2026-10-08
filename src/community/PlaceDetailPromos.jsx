@@ -47,15 +47,16 @@ export default function PlaceDetailPromos({ placeId, shopName, defaultPromo, all
   }, [placeId]);
 
   // 포스트/단일 포스터만 필터링 (카드뉴스는 캠페인 구역으로 분리)
-  const posterItems = promosList.filter(item => {
+  const posterItems = (promosList || []).filter(item => {
+    if (!item || typeof item !== 'object') return false;
     return Boolean(item.card || item.hasPoster || (!item.carousel && item.poster));
   });
 
   // 최근에 게시한 포스트일수록 위로 오도록 최신순(updatedAt 내림차순) 정렬
   const sortedPosters = [...posterItems].sort((a, b) => {
-    const tA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-    const tB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-    return tB - tA;
+    const tA = new Date(a?.updatedAt || a?.createdAt || 0).getTime();
+    const tB = new Date(b?.updatedAt || b?.createdAt || 0).getTime();
+    return (isNaN(tB) ? 0 : tB) - (isNaN(tA) ? 0 : tA);
   });
 
   // 유효한 인덱스 유지
@@ -109,7 +110,8 @@ export default function PlaceDetailPromos({ placeId, shopName, defaultPromo, all
     }
   };
 
-  const currentPoster = sortedPosters[activePosterIndex];
+  const currentPoster = sortedPosters[activePosterIndex] || sortedPosters[0];
+  if (!currentPoster) return null;
 
   return (
     <div

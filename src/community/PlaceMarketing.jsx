@@ -61,8 +61,10 @@ export default function PlaceMarketing({ placeId, shopName, initialCampaigns = [
   }, [activeCarouselIdx]);
 
   // 카드뉴스(캐러셀)와 일반 텍스트 캠페인 분리 (단일 포스터는 홍보소식 구역에서 전담)
-  const carouselCampaigns = items.filter(c => Boolean(c.carousel && Array.isArray(c.carousel.slides) && c.carousel.slides.length > 0));
-  const otherCampaigns = items.filter(c => !c.carousel && !c.card && !c.hasPoster);
+  const carouselCampaigns = (items || []).filter(c => {
+    return Boolean(c && typeof c === 'object' && c.carousel && Array.isArray(c.carousel.slides) && c.carousel.slides.filter(s => s && typeof s === 'object').length > 0);
+  });
+  const otherCampaigns = (items || []).filter(c => c && typeof c === 'object' && !c.carousel && !c.card && !c.hasPoster);
 
   const hasAnyContent = carouselCampaigns.length > 0 || otherCampaigns.length > 0;
   const currentCarouselCampaign = carouselCampaigns[activeCarouselIdx] || carouselCampaigns[0];
