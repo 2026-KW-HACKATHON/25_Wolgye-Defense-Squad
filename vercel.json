@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "{certs/**,src/community/wolgye1-boundary.json}"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index?__apiPath=:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
