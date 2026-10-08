@@ -465,3 +465,6 @@
 .menu-board{width:100%;font-weight:400}.menu-board table{width:100%;border-collapse:collapse;font-size:16px}.menu-board th{font-size:13px;color:#69776f;text-align:left;padding:10px 0;border-bottom:2px solid #dce3d7}.menu-board td{padding:13px 0;border-bottom:1px solid #e8ece3;overflow-wrap:anywhere}.menu-board th:last-child,.menu-board td:last-child{text-align:right;padding-left:16px;white-space:nowrap}.menu-board .text-link{margin-top:12px}.place-info .info-value{min-width:0;white-space:pre-wrap}.place-info .info-value>small{display:block;margin-top:12px;font-size:13px;font-weight:400;line-height:1.7}
 
 .place-info .fact-list>.menu-info-row{display:block}.menu-info-row>span{display:block;margin-bottom:8px;font-weight:700}.menu-info-row .info-value{display:block}
+
+/* Keep menu geometry independent of the visible row contents. */
+.place-info .fact-list>.menu-info-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%}.menu-info-row>.info-value{width:100%;min-width:0}.menu-board table{table-layout:fixed;width:100%}.menu-board th:last-child,.menu-board td:last-child{width:130px;white-space:normal;overflow-wrap:anywhere}.modal{scrollbar-gutter:stable}
