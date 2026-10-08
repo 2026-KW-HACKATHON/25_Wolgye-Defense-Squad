@@ -33,6 +33,6 @@ export async function checkDatabase(){
   await getPool().query('SELECT id FROM wolgye.posts LIMIT 0');
   await getPool().query('SELECT id FROM wolgye.places LIMIT 0');
   await getPool().query('SELECT id FROM wolgye.place_info LIMIT 0');
-  for(const table of ['owner_accounts','owner_campaigns','owner_proposals','owner_views','owner_keywords','owner_coupons','user_rewards','user_data'])await getPool().query(`SELECT id FROM wolgye.${table} LIMIT 0`);
+  for(const table of ['menu_reviews','owner_accounts','owner_campaigns','owner_proposals','owner_views','owner_keywords','owner_coupons','user_rewards','user_data'])await getPool().query(`SELECT id FROM wolgye.${table} LIMIT 0`);
   await getPool().query('SELECT id FROM wolgye.discord_memberships LIMIT 0');
 }

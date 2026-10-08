@@ -1,3 +1,4 @@
+import {listReviews,decideReview} from './services/menuReview.js';
 import {chat,chatJSON,textModel} from './services/llm.js';
 import {cleanCard,POSTER_GUIDE} from './services/posterCard.js';
 import {authenticate,requireUser,requireAdmin} from './auth.js';
@@ -21,6 +22,8 @@ export function createOwnerMarketingRouter(){
   const failure=(res,e)=>res.status(e.status||500).json({error:e.name==='TimeoutError'?'AI 응답이 지연되고 있어요. 다시 시도해 주세요.':e.message});
 
   router.post('/register',requireUser,limit(5,3600000),async(req,res)=>{try{const placeId=clean(req.body?.placeId,120);if(!placeId||!await placeExists(placeId))return res.status(400).json({error:'등록된 가게를 선택해 주세요.'});if(!(await store.requestUserAccount(placeId,req.user)))return res.status(409).json({error:'이미 신청 중이거나 승인된 가게가 있어요.'});res.status(201).json({status:'pending'});}catch(e){failure(res,e);}});
+  router.get('/admin/menu-reviews',admin,async(req,res)=>{try{res.json({items:await listReviews()});}catch{res.status(503).json({error:'검토 목록을 불러오지 못했어요.'});}});
+  router.post('/admin/menu-reviews/:id',admin,async(req,res)=>{if(typeof req.body?.approve!=='boolean')return res.sendStatus(400);try{res.json(await decideReview(req.params.id,req.body.approve,req.user.id));}catch(e){res.status(e.status||503).json({error:e.status?e.message:'검토 결과 저장에 실패했어요.'});}});
   router.get('/admin/requests',admin,async(req,res)=>res.json({items:(await store.pendingAccounts())}));
   router.post('/admin/requests/:id',admin,async(req,res)=>{if(typeof req.body?.approve!=='boolean')return res.status(400).json({error:'approve 값을 지정해 주세요.'});res.status((await store.approveAccount(req.params.id,req.body.approve))?200:404).json({ok:true});});
 

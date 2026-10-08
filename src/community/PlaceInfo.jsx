@@ -25,7 +25,7 @@ export function PlaceInfoView({place,onEdit}){
   <div className="fact-list">
    <div><span>주소</span><b>{place.address}</b></div>
    <div><span>전화</span><b>{place.phone||'등록 정보 없음'}</b></div>
-   {INFO_FIELDS.map(([key,label])=>{const f=fields[key];return <div key={key} className={key==='menu'?'menu-info-row':''}><span>{label}</span>{f?<div className="info-value">{key==='menu'?<MenuTable key={f.value} value={f.value}/>:f.value}<small><RoleBadge role={f.role}/> {f.role==='internet'?<>{f.observedAt} 블로그 메뉴판 기준 · 지금과 다를 수 있어요{f.sourceUrl&&<> · <a href={f.sourceUrl} target="_blank" rel="noreferrer">출처</a></>}</>:<>{f.author} · {f.observedAt} 확인{f.role!=='owner'&&' · 사장님 확인 전'}</>}</small></div>:<b className="unknown">아직 정보가 없어요</b>}</div>;})}
+   {INFO_FIELDS.map(([key,label])=>{const f=fields[key];return <div key={key} className={key==='menu'?'menu-info-row':''}><span>{label}</span>{f?<div className="info-value">{key==='menu'?<MenuTable key={f.value} value={f.value}/>:f.value}<small><RoleBadge role={f.role}/> {f.role==='internet'?<>검색 결과 등록일 {f.observedAt} · 촬영일 미확인 · 현재 가격과 다를 수 있어요{f.sourceUrl&&<> · <a href={f.sourceUrl} target="_blank" rel="noreferrer">출처</a></>}</>:<>{f.author} · {f.observedAt} 확인{f.role!=='owner'&&' · 사장님 확인 전'}</>}</small></div>:<b className="unknown">아직 정보가 없어요</b>}</div>;})}
   </div>
   {!!history.length&&<details className="recommendation-info"><summary>최근 수정 기록 ({Math.min(2,history.length)})</summary>{history.slice(0,2).map((h,i)=><article className="place-update" key={i}><b>{INFO_FIELDS.find(f=>f[0]===h.field)?.[1]||h.field}</b><p>{h.before||'(없음)'} → {h.after||'(삭제)'}</p><small><RoleBadge role={h.role}/> {h.author} · {h.observedAt} 확인</small></article>)}</details>}
  </section>;
