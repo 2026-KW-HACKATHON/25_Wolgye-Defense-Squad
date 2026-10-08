@@ -18,6 +18,7 @@ test('health, validation, restaurant search, chat and share preparation', {timeo
     const base='http://localhost:'+port;
     const post=(path,body)=>fetch(base+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     assert.equal((await fetch(base+'/api/health')).status,200);
+    assert.equal((await post('/api/community/recommend',{message:''})).status,400);
     assert.equal((await post('/api/chat',{message:42})).status,400);
     const catalogResponse=await fetch(base+'/api/restaurants?q=한식');
     assert.equal(catalogResponse.status,200);

@@ -9,7 +9,7 @@ const validGender=new Set(['여성','남성','기타']);
 const validTime=new Set(['아침','점심','저녁','야식']);
 
 export function createOwnerMarketingStore(file=path.resolve('.local-data/owner-marketing.json')){
-  let data={campaigns:[],proposals:[],views:[],sessions:[],accounts:[]};
+  let data={campaigns:[],proposals:[],views:[],sessions:[],accounts:[],keywords:[]};
   if(fs.existsSync(file))data={...data,...JSON.parse(fs.readFileSync(file,'utf8'))};
   const persist=()=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(`${file}.tmp`,JSON.stringify(data));fs.renameSync(`${file}.tmp`,file);};
   const session=token=>data.sessions.find(s=>s.expires>Date.now()&&s.hash===digest(token||''));
@@ -23,6 +23,8 @@ export function createOwnerMarketingStore(file=path.resolve('.local-data/owner-m
     session,
     logout(token){data.sessions=data.sessions.filter(s=>s.hash!==digest(token||''));persist();},
     campaigns:placeId=>data.campaigns.filter(c=>c.placeId===placeId),
+    keywords:placeId=>data.keywords.find(row=>row.placeId===placeId)?.values||[],
+    saveKeywords(placeId,values){const row=data.keywords.find(item=>item.placeId===placeId);if(row){row.values=values;row.updatedAt=new Date().toISOString();}else data.keywords.push({placeId,values,updatedAt:new Date().toISOString()});persist();return values;},
     publicCampaigns:placeId=>data.campaigns.filter(c=>c.placeId===placeId&&c.status==='published').map(({ownerNote,...c})=>c),
     saveCampaign(placeId,values,id){const i=id?data.campaigns.findIndex(c=>c.id===id&&c.placeId===placeId):-1;if(id&&i<0)return null;const row={...values,id:id||randomUUID(),placeId,createdAt:i<0?new Date().toISOString():data.campaigns[i].createdAt,updatedAt:new Date().toISOString()};if(i<0)data.campaigns.unshift(row);else data.campaigns[i]=row;persist();return row;},
     removeCampaign(placeId,id){const i=data.campaigns.findIndex(c=>c.id===id&&c.placeId===placeId);if(i<0)return false;data.campaigns.splice(i,1);persist();return true;},

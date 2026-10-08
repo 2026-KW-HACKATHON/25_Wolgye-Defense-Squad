@@ -1,6 +1,6 @@
 import { searchKakaoMultiQuery, fetchBlogSnippetForPlace } from './kakaoService.js';
 
-const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Cache recent recommended restaurants in memory for selection flow
 const recentRestaurantsCache = new Map();
@@ -21,17 +21,17 @@ const FOOD_KEYWORD_MAP = [
 ];
 
 /**
- * Call NVIDIA NIM API
+ * Call OpenRouter text model
  */
 async function callNIM(messages, options = {}) {
-  const apiKey = process.env.NVIDIA_API_KEY;
-  const model = process.env.NVIDIA_MODEL || 'meta/llama-3.2-11b-vision-instruct';
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free';
 
   if (!apiKey) {
-    throw new Error('NVIDIA_API_KEY is not configured in .env');
+    throw new Error('OPENROUTER_API_KEY is not configured in .env');
   }
 
-  const response = await fetch(NVIDIA_API_URL, {
+  const response = await fetch(OPENROUTER_API_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -47,8 +47,9 @@ async function callNIM(messages, options = {}) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('NVIDIA NIM API Error:', response.status, errorText);
-    throw new Error(`NVIDIA NIM API error: ${response.status}`);
+    console.error('OpenRouter API Error:', response.status, errorText);
+    if(response.status===401)throw new Error('OpenRouter API 키가 거절됐어요. .env의 OPENROUTER_API_KEY를 확인해 주세요.');
+    throw new Error(`OpenRouter API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -210,7 +211,7 @@ export async function processChatRecommendation(userMessage, conversationHistory
     })
   );
 
-  // 6. NVIDIA NIM 대화형 답변 생성
+  // 6. OpenRouter 대화형 답변 생성
   let aiMessage = '';
   try {
     const prompt = `당신은 광운대학교 인근 로컬 미식 추천 AI 에이전트입니다.

@@ -17,6 +17,8 @@ test('approval gates owner access, campaigns, and reports',()=>{
   const {token,placeId}=store.login('owner@example.com','strong-password-123');
   assert.equal(placeId,'shop-1');
   assert.equal(store.session(token).placeId,'shop-1');
+  store.saveKeywords(placeId,['혼밥','단체']);
+  assert.deepEqual(store.keywords(placeId),['혼밥','단체']);
   store.saveCampaign(placeId,{title:'오늘의 소식',body:'가게에서 확인한 내용',status:'published',proposalId:''});
   assert.equal(store.publicCampaigns(placeId).length,1);
   assert.equal(store.publicCampaigns('shop-2').length,0);

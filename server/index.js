@@ -20,8 +20,8 @@ const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json({limit:'8mb'}));
-app.use('/api/community', createContributionRouter());
 app.use('/api/community', communityRoutes);
+app.use('/api/community', createContributionRouter());
 app.use('/api/groups', createGroupRouter());
 app.use('/api/owner', createOwnerMarketingRouter());
 
@@ -29,8 +29,8 @@ app.use('/api/owner', createOwnerMarketingRouter());
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    model: process.env.NVIDIA_MODEL || 'meta/llama-3.2-11b-vision-instruct',
-    hasKey: !!process.env.NVIDIA_API_KEY,
+    model: process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    hasKey: !!process.env.OPENROUTER_API_KEY,
     hasKakaoKey: !!(process.env.KAKAO_REST_API_KEY && process.env.KAKAO_REST_API_KEY !== 'your_kakao_rest_api_key_here')
   });
 });
