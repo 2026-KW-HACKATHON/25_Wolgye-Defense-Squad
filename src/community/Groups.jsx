@@ -28,7 +28,7 @@ export default function Groups({nickname}) {
   },[active,mine?.token,busy]);
   const ready=group?.members.every(m=>m.condition);
   return <div className="groups-page">
-    <div className="page-heading"><div><span className="eyebrow">BETTER TOGETHER</span><h1>각자의 조건을 모아,<br/>함께 골라요<span className="lime-period">.</span></h1><p>모임을 만들고 초대 코드를 나누세요. 각자 조건을 쓰고 함께 투표해요.</p></div></div>
+    <div className="page-heading"><div className="badge-title"><h1><mark className="hl">모임</mark></h1><span className="title-badge">{Object.keys(memberships).length?`${Object.keys(memberships).length}개 참여 중`:'아직 모임 없음'}</span></div></div>
     {error&&<div className="notice" role="alert">{error}</div>}{message&&<p role="status" className="notice">{message}</p>}
     {!group?<>
       <label>모임에서 사용할 닉네임<input value={nick} maxLength={30} onChange={e=>setNick(e.target.value)} /></label>

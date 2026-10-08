@@ -17,7 +17,8 @@ export function getPool(){
   // pg URL SSL flags otherwise override this verified TLS configuration.
   for(const key of ['sslmode','sslrootcert','sslcert','sslkey'])connection.searchParams.delete(key);
   const ssl=local?false:{rejectUnauthorized:true,...(process.env.DATABASE_CA_FILE?{ca:fs.readFileSync(process.env.DATABASE_CA_FILE,'utf8')}:{})};
-  pool=new pg.Pool({connectionString:connection.toString(),ssl,max:5,connectionTimeoutMillis:10000,idleTimeoutMillis:30000,statement_timeout:15000});
+  // 한동안 안 쓴 뒤 첫 연결이 느려 시간 초과가 나던 문제: 연결을 살려두고 대기 시간을 늘린다.
+  pool=new pg.Pool({connectionString:connection.toString(),ssl,max:5,connectionTimeoutMillis:20000,idleTimeoutMillis:300000,keepAlive:true,statement_timeout:15000});
   pool.on('error',()=>console.error('공용 DB 연결 오류. DB 상태와 네트워크를 확인하세요.'));
   return pool;
 }

@@ -1,7 +1,8 @@
 import React,{useEffect,useState} from 'react';
 
 async function record(placeId,details){const response=await fetch(`/api/owner/views/${encodeURIComponent(placeId)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({details})});if(!response.ok)throw new Error('조회 정보를 반영하지 못했어요.');}
-export function recordPlaceView(placeId){record(placeId).catch(()=>{});}
+// 로그인한 이용자가 프로필에 연령대·성별을 남겼다면 그 값만 함께 보낸다(서버가 허용된 값만 저장).
+export function recordPlaceView(placeId,profile){record(placeId,profile?{age:profile.ageGroup||undefined,gender:profile.gender||undefined}:undefined).catch(()=>{});}
 
 export default function PlaceMarketing({placeId}){
  const [items,setItems]=useState([]),[open,setOpen]=useState(false),[thanks,setThanks]=useState(false),[details,setDetails]=useState({age:'',gender:'',people:'',budget:'',mealTime:''});

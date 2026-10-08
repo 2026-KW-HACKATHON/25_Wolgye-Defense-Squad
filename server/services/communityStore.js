@@ -3,7 +3,7 @@ import {createPostgresCommunityStore} from '../db/postgresStores.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
-import {applyInfoEdit} from './placeInfo.js';
+import {applyInfoEdit,contributionStats} from './placeInfo.js';
 
 export function createCommunityStore(file=path.resolve('.local-data/community.json')) {
   let data={places:[],posts:[],placeInfo:{}};
@@ -23,6 +23,7 @@ export function createCommunityStore(file=path.resolve('.local-data/community.js
       persist();return publicRow(row,token);
     },
     placeInfo:()=>data.placeInfo,
+    contributionStats:token=>contributionStats({posts:data.posts,places:data.places,infos:data.placeInfo,token,hash:owner}),
     savePlaceInfo:(placeId,changes,editor)=>{const row=applyInfoEdit(data.placeInfo[placeId],placeId,changes,editor);if(!row)return null;data.placeInfo[placeId]=row;persist();return row;},
     removePost:(id,token)=>{const i=data.posts.findIndex(p=>p.id===id&&p.ownerHash===owner(token));if(i<0)return false;data.posts.splice(i,1);persist();return true;}
   };

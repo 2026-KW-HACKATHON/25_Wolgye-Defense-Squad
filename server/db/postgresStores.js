@@ -1,6 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {transaction} from './pool.js';
-import {applyInfoEdit} from '../services/placeInfo.js';
+import {applyInfoEdit,contributionStats} from '../services/placeInfo.js';
 const hash=token=>createHash('sha256').update(token).digest('hex');
 const publicRow=({ownerHash,...p},token)=>({...p,...(token?{mine:ownerHash===hash(token)}:{})});
 const problem=(message,status=409)=>Object.assign(new Error(message),{status});
@@ -27,6 +27,7 @@ export function createPostgresCommunityStore(pool){
       if(old)await c.query('UPDATE wolgye.posts SET data=$2 WHERE id=$1',[id,row]);else await c.query('INSERT INTO wolgye.posts(id,data) VALUES ($1,$2)',[row.id,row]);
       return publicRow(row,token);
     }),
+    contributionStats:async token=>contributionStats({posts:await rows('posts'),places:await rows('places'),infos:Object.fromEntries((await pool.query('SELECT id,data FROM wolgye.place_info')).rows.map(r=>[r.id,r.data])),token,hash}),
     placeInfo:async()=>Object.fromEntries((await pool.query('SELECT id,data FROM wolgye.place_info')).rows.map(r=>[r.id,r.data])),
     savePlaceInfo:(placeId,changes,editor)=>transaction(pool,async c=>{
       const old=(await c.query('SELECT data FROM wolgye.place_info WHERE id=$1 FOR UPDATE',[placeId])).rows[0]?.data;

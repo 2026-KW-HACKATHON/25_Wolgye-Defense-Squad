@@ -25,3 +25,17 @@ export function publicInfo(info){
 export function infoReports(info){
   return Object.entries(info?.fields||{}).map(([key,f])=>({id:`info-${key}`,body:`${INFO_FIELDS[key]?.label||key}: ${f.value}`,type:f.role==='owner'?'사장님 확인 정보':'이웃 수정 정보',observedAt:f.observedAt}));
 }
+
+// 기여 현황: 함께 채운 이웃 수와 내 기여. 소식·장소의 ownerHash는 hash(token), 가게 정보 기록의 editorHash는 token 그대로 저장돼 있다.
+export function contributionStats({posts=[],places=[],infos={},token,hash}){
+  const people=new Set();
+  for(const row of [...posts,...places])if(row.ownerHash)people.add(row.ownerHash);
+  for(const info of Object.values(infos))for(const h of info.history||[])if(h.editorHash)people.add(hash(h.editorHash));
+  if(!token)return {contributors:people.size,mine:null};
+  const me=hash(token);
+  return {contributors:people.size,mine:{
+    posts:posts.filter(p=>p.ownerHash===me).length,
+    places:Object.values(infos).filter(info=>(info.history||[]).some(h=>h.editorHash===token)).length,
+    added:places.filter(p=>p.ownerHash===me).length
+  }};
+}

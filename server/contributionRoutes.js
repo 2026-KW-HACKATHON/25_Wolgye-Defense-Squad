@@ -16,6 +16,7 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
     }
     next();
   });
+  router.get('/contributions',async(req,res)=>{try{res.json(await store.contributionStats(req.contributor));}catch{res.status(503).json({error:'기여 현황을 불러오지 못했어요.'});}});
   router.get('/posts',async(req,res)=>{try{res.json({items:await store.posts(req.contributor)});}catch{res.status(503).json({error:'공용 저장소에서 소식을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'});}});
   router.post('/places',async(req,res)=>{
     try{

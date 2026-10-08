@@ -13,6 +13,7 @@ import {createGroupRouter} from './groupRoutes.js';
 import {createOwnerMarketingRouter} from './ownerMarketingRoutes.js';
 import {ownerMarketingStore} from './services/ownerMarketingStore.js';
 import {userDataStore} from './services/userDataStore.js';
+import {aiReady,textModel} from './services/llm.js';
 
 dotenv.config();
 
@@ -28,8 +29,9 @@ app.get('/api/auth/config',(req,res)=>{const config=authConfig();if(!config.url|
 app.get('/api/auth/me',authenticate,requireUser,async(req,res)=>{const a=await ownerMarketingStore.accountForUser(req.user.id);res.json({user:{id:req.user.id,email:req.user.email,nickname:req.user.user_metadata?.nickname||'월계 이웃',admin:req.isAdmin,ownerPlaceId:a?.status==='approved'?a.placeId:null}});});
 app.get('/api/me/data',authenticate,requireUser,async(req,res)=>{try{res.json(await userDataStore.get(req.user.id));}catch{res.status(503).json({error:'내 기록을 불러오지 못했어요.'});}});
 app.put('/api/me/data',authenticate,requireUser,async(req,res)=>{try{res.json(await userDataStore.set(req.user.id,req.body));}catch{res.status(503).json({error:'내 기록을 저장하지 못했어요.'});}});
-app.use('/api/community', authenticate, createContributionRouter({requireAccount:true,roleFor:async(req,placeId)=>{if(!req.user)return 'neighbor';const a=await ownerMarketingStore.accountForUser(req.user.id);return a?.status==='approved'&&a.placeId===placeId?'owner':'neighbor';}}));
+// 장소 목록과 찾기 검색은 로그인 없이 쓸 수 있어야 하므로 로그인 검사보다 먼저 연결한다.
 app.use('/api/community', communityRoutes);
+app.use('/api/community', authenticate, createContributionRouter({requireAccount:true,roleFor:async(req,placeId)=>{if(!req.user)return 'neighbor';const a=await ownerMarketingStore.accountForUser(req.user.id);return a?.status==='approved'&&a.placeId===placeId?'owner':'neighbor';}}));
 app.use('/api/groups', createGroupRouter());
 app.use('/api/owner', createOwnerMarketingRouter());
 
@@ -37,8 +39,8 @@ app.use('/api/owner', createOwnerMarketingRouter());
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
-    model: process.env.NVIDIA_MODEL || 'meta/llama-3.2-11b-vision-instruct',
-    hasKey: !!process.env.NVIDIA_API_KEY,
+    model: textModel(),
+    hasKey: aiReady(),
     hasKakaoKey: !!(process.env.KAKAO_REST_API_KEY && process.env.KAKAO_REST_API_KEY !== 'your_kakao_rest_api_key_here')
   });
 });

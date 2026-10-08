@@ -1,6 +1,6 @@
+import { chat } from './llm.js';
 import { searchKakaoMultiQuery, fetchBlogSnippetForPlace } from './kakaoService.js';
 
-const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 
 // Cache recent recommended restaurants in memory for selection flow
 const recentRestaurantsCache = new Map();
@@ -24,35 +24,7 @@ const FOOD_KEYWORD_MAP = [
  * Call NVIDIA NIM API
  */
 async function callNIM(messages, options = {}) {
-  const apiKey = process.env.NVIDIA_API_KEY;
-  const model = process.env.NVIDIA_MODEL || 'meta/llama-3.2-11b-vision-instruct';
-
-  if (!apiKey) {
-    throw new Error('NVIDIA_API_KEY is not configured in .env');
-  }
-
-  const response = await fetch(NVIDIA_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: options.temperature ?? 0.6,
-      max_tokens: options.max_tokens ?? 600
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('NVIDIA NIM API Error:', response.status, errorText);
-    throw new Error(`NVIDIA NIM API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  return chat(messages, { temperature: options.temperature ?? 0.6, maxTokens: options.max_tokens ?? 600 });
 }
 
 /**

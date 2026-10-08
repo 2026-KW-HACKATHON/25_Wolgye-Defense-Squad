@@ -7,7 +7,7 @@ globalThis.fetch = async function (input) {
   if (url.hostname === 'dapi.kakao.com' && url.pathname.includes('/blog')) {
     return Response.json({documents:[]});
   }
-  if (url.hostname === 'integrate.api.nvidia.com') {
+  if (url.hostname === 'openrouter.ai') {
     return Response.json({choices:[{message:{content:'테스트 추천 소개입니다.'}}]});
   }
   throw new Error('Unexpected external request: ' + url.hostname);

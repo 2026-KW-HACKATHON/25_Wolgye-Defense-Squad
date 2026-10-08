@@ -1,3 +1,4 @@
+import {expand} from './groupRecommend.js';
 // Lexical retrieval: no embeddings and no inferred shop facts.
 const stop = new Set(['식당','가게','추천','해주세요','싶어요','먹고','있는','참가자']);
 export function inspectConditions(message, place) {
@@ -22,7 +23,8 @@ function tokens(text) {
   }) || [])];
 }
 export function retrieveCommunity(message, places, now=Date.now()) {
-  const query=tokens(message);
+  // "국물"처럼 가게 업종에 직접 나오지 않는 표현은 모임 추천과 같은 사전으로 넓혀 검색한다.
+  const query=tokens(`${message} ${(String(message).match(/[가-힣]+/g)||[]).flatMap(w=>expand(w).slice(1)).join(' ')}`);
   const docs=places.flatMap(p=>[
     {placeId:p.id,text:`${p.name} ${p.kind} ${p.category||''}`,source:'listing'},
     ...(p.reports||[]).map(report=>({placeId:p.id,text:report.body,source:'report',report}))
