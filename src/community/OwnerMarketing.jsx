@@ -42,6 +42,15 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   const [format,setFormat]=useState('square');
   const [proposals,setProposals]=useState([]);
   const [preview,setPreview]=useState({});
+  const [generatingStep,setGeneratingStep]=useState(0);
+  const stepTimer=useRef(null);
+
+  const GENERATION_STEPS=[
+    {icon:'🎯',text:'1단계: 사장님 요청 분석 & 홍보 콘셉트 기획 중...'},
+    {icon:'✍️',text:'2단계: 시선을 사로잡는 AI 카피라이팅 & 문구 작성 중...'},
+    {icon:'📸',text:'3단계: 실사 음식·거리·셀럽 사진 웹 검색 & 비주얼 바인딩 중...'},
+    {icon:'🎨',text:'4단계: 실시간 캔버스 스타일링 & 레이아웃 완성 중...'}
+  ];
 
   // 캠페인 & 키워드 & 쿠폰 & 리포트 & 배달앱 링크
   const [campaigns,setCampaigns]=useState([]);
@@ -61,7 +70,22 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
     setBusy(true);
     setError('');
     setNotice('');
-    try{await work();}catch(e){setError(e.message);}finally{setBusy(false);}
+    setGeneratingStep(1);
+    let s=1;
+    clearInterval(stepTimer.current);
+    stepTimer.current=setInterval(()=>{
+      s=(s%4)+1;
+      setGeneratingStep(s);
+    },1800);
+    try{
+      await work();
+    }catch(e){
+      setError(e.message);
+    }finally{
+      clearInterval(stepTimer.current);
+      setGeneratingStep(0);
+      setBusy(false);
+    }
   };
 
   const load=async()=>{
@@ -95,6 +119,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
   },[]);
 
   useEffect(()=>()=>{
+    clearInterval(stepTimer.current);
     for(const url of previewUrls.current)URL.revokeObjectURL(url);
   },[]);
 
@@ -106,7 +131,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
     });
   }
 
-  // AI 홍보 대화 전송
+  // AI 홍보 대화 전송 및 실시간 수정 (Revision Loop)
   async function send(e){
     e?.preventDefault();
     const text=message.trim();
@@ -114,34 +139,65 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
     await run(async()=>{
       const history=chat.map(x=>({
         role:x.role,
-        content:x.carousel
-          ? `${x.content}\n\n현재 캐러셀 JSON: ${JSON.stringify(x.carousel)}`
-          : x.card
-            ? `${x.content}\n\n현재 포스터 JSON: ${JSON.stringify(x.card)}`
-            : x.content
+        content:x.content
       }));
-      const d=await api('/chat',{method:'POST',body:{message:text,history}});
+      const payload={
+        message:text,
+        history,
+        currentVisual:activeVisual // 현재 활성화된 캐러셀 or 포스터를 전달하여 지속 수정 가능
+      };
+      const d=await api('/chat',{method:'POST',body:payload});
       setChat(x=>[...x,{role:'user',content:text},{role:'assistant',content:d.reply,card:d.card||null,carousel:d.carousel||null}]);
       setMessage('');
       if(d.carousel){
         setActiveVisual({type:'carousel',data:d.carousel});
-        setNotice('✨ 새로운 인스타그램 캐러셀 카드뉴스를 우측 스튜디오에 반영했어요!');
+        setNotice('✨ 인스타그램 캐러셀 카드뉴스를 우측 스튜디오에 실시간 반영했어요!');
       }else if(d.card){
         setActiveVisual({type:'card',data:d.card});
-        setNotice('✨ 새로운 포스터를 우측 스튜디오에 반영했어요!');
+        setNotice('✨ 포스터를 우측 스튜디오에 실시간 반영했어요!');
       }
     });
   }
 
-  // 인스타 캐러셀 카드뉴스 쾌속 생성
+  // 1. 인스타 캐러셀 카드뉴스 쾌속 생성
   async function generateQuickCarousel(promptText){
-    const briefText=promptText||message.trim()||`${selectedPlace?.name||'월계동 맛집'} 대표 메뉴와 연예인 추천 인스타 카드뉴스`;
+    const briefText=promptText||message.trim()||`${selectedPlace?.name||'우리 가게'} 대표 메뉴와 매력을 담은 인스타 카드뉴스`;
     await run(async()=>{
       const d=await api('/carousel',{method:'POST',body:{brief:briefText}});
       if(d.carousel){
         setActiveVisual({type:'carousel',data:d.carousel});
-        setChat(x=>[...x,{role:'user',content:`[캐러셀 제작 요청] ${briefText}`},{role:'assistant',content:'📸 인스타그램 캐러셀(카드뉴스)을 제작했어요! 우측 스튜디오에서 슬라이드를 넘겨보거나 [웹에서 사진 찾기]로 사진을 교체해 보세요.',carousel:d.carousel}]);
+        setChat(x=>[...x,{role:'user',content:`[캐러셀 제작 요청] ${briefText}`},{role:'assistant',content:'📸 인스타그램 캐러셀 카드뉴스를 제작했어요! 우측 스튜디오에서 슬라이드를 확인하고 대화창에서 수정을 요청해 보세요.',carousel:d.carousel}]);
         setNotice('🎉 인스타그램 캐러셀 카드뉴스가 생성되었습니다! 우측 스튜디오를 확인해 주세요.');
+      }
+    });
+  }
+
+  // 2. 연예인·셀럽 추천 스토리 쾌속 생성 (사장님이 지정한 연예인 100% 반영)
+  async function generateQuickCelebStory(){
+    const text=message.trim();
+    const briefText=text?`[셀럽 추천 스토리] ${text}`:`${selectedPlace?.name||'우리 가게'} 화제의 인기 아이돌·셀럽 극찬 맛집 스토리`;
+    await run(async()=>{
+      const d=await api('/carousel',{method:'POST',body:{brief:briefText}});
+      if(d.carousel){
+        setActiveVisual({type:'carousel',data:d.carousel});
+        setChat(x=>[...x,{role:'user',content:`[셀럽 스토리 요청] ${briefText}`},{role:'assistant',content:'⭐ 셀럽 추천 카드뉴스를 제작했어요! 슬라이드 3장의 추천 멘트와 사진을 확인해 보세요. 다른 연예인으로 바꾸려면 대화창에 말씀해 주세요.',carousel:d.carousel}]);
+        setNotice('🎉 셀럽 추천 스토리가 생성되었습니다! 우측 스튜디오를 확인해 주세요.');
+      }
+    });
+  }
+
+  // 3. 파격 할인 단일 포스터 쾌속 생성 (즉시 우측 스튜디오에 포스터 렌더링)
+  async function generateQuickPoster(promptText){
+    const userText=promptText||message.trim()||'주말 학생 할인 20% 파격 혜택 단일 포스터';
+    const briefText=userText.includes('포스터')?userText:`${userText} 단일 포스터로 만들어줘`;
+    await run(async()=>{
+      const d=await api('/chat',{method:'POST',body:{message:briefText,currentVisual:null}});
+      if(d.card){
+        setActiveVisual({type:'card',data:d.card});
+        setChat(x=>[...x,{role:'user',content:`[단일 포스터 요청] ${briefText}`},{role:'assistant',content:d.reply||'📜 단일 포스터를 제작했어요! 우측 스튜디오에서 확인해 보세요.',card:d.card}]);
+        setNotice('🎉 단일 포스터가 생성되었습니다! 우측 스튜디오를 확인해 주세요.');
+      }else if(d.carousel){
+        setActiveVisual({type:'carousel',data:d.carousel});
       }
     });
   }
@@ -396,7 +452,7 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                     type="button"
                     className="chip-btn"
                     disabled={busy}
-                    onClick={()=>generateQuickCarousel('광운대 앞 대표 메뉴와 연예인 추천을 담은 인스타 카드뉴스')}
+                    onClick={()=>generateQuickCarousel()}
                   >
                     🔥 인스타 캐러셀 카드뉴스 (3~5장)
                   </button>
@@ -404,7 +460,8 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                     type="button"
                     className="chip-btn"
                     disabled={busy}
-                    onClick={()=>generateQuickCarousel('성시경 백종원이 감탄한 우리 동네 숨은 맛집 스토리')}
+                    onClick={generateQuickCelebStory}
+                    title="입력창에 특정 연예인/아이돌(예: 카리나, 뉴진스 등)을 적고 누르면 해당 인물로 제작됩니다"
                   >
                     ⭐ 연예인·셀럽 먹방 추천 스토리
                   </button>
@@ -412,12 +469,27 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                     type="button"
                     className="chip-btn"
                     disabled={busy}
-                    onClick={()=>{setMessage('주말 대학생 20% 특별 할인 포스터 만들어줘');}}
+                    onClick={()=>generateQuickPoster()}
                   >
                     ⚡ 파격 할인 단일 포스터
                   </button>
                 </div>
               </div>
+
+              {/* 진행 상태 인디케이터 (요청 제작 중일 때 실시간 단계 표시) */}
+              {generatingStep>0&&(
+                <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:'12px',padding:'12px 18px',margin:'14px 0',boxShadow:'0 2px 8px rgba(37,99,235,0.08)'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}}>
+                    <span style={{fontWeight:800,fontSize:'14px',color:'#1e40af'}}>
+                      {GENERATION_STEPS[generatingStep-1]?.icon} {GENERATION_STEPS[generatingStep-1]?.text}
+                    </span>
+                    <span style={{fontSize:'12px',fontWeight:700,color:'#2563eb'}}>진행 중 ({generatingStep}/4)</span>
+                  </div>
+                  <div style={{width:'100%',background:'#dbeafe',borderRadius:'99px',height:'8px',overflow:'hidden'}}>
+                    <div style={{width:`${generatingStep*25}%`,background:'linear-gradient(90deg, #3b82f6, #1d4ed8)',height:'100%',transition:'width 0.4s ease',borderRadius:'99px'}}/>
+                  </div>
+                </div>
+              )}
 
               {/* 2단 분할 레이아웃: 좌측 대화창 & 요청 / 우측 실시간 뷰어 & 편집기 */}
               <div className="studio-split-layout">
@@ -433,22 +505,25 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                   </div>
 
                   <div className="owner-chat studio-chat-box">
-                    {chat.length?chat.map((x,i)=>(
-                      <div key={i} className={'owner-chat-msg '+x.role}>
-                        <p className={x.role}>{x.content}</p>
-                        {x.role==='assistant'&&(x.carousel||x.card)&&(
-                          <div className="chat-card-preview-btn">
-                            <button
-                              type="button"
-                              className="button outline small"
-                              onClick={()=>setActiveVisual(x.carousel?{type:'carousel',data:x.carousel}:{type:'card',data:x.card})}
-                            >
-                              👁️ {x.carousel?'캐러셀 카드뉴스 스튜디오에서 보기':'포스터 스튜디오에서 보기'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )):(
+                    {chat.length?chat.map((x,i)=>{
+                      const cleanContent=x.content.replace(/```(?:json)?[\s\S]*?```/g,'').replace(/\{[\s\S]*?(?:"slides"|"layout")[\s\S]*?\}/g,'').trim();
+                      return (
+                        <div key={i} className={'owner-chat-msg '+x.role}>
+                          <p className={x.role}>{cleanContent||x.content}</p>
+                          {x.role==='assistant'&&(x.carousel||x.card)&&(
+                            <div className="chat-card-preview-btn">
+                              <button
+                                type="button"
+                                className="button outline small"
+                                onClick={()=>setActiveVisual(x.carousel?{type:'carousel',data:x.carousel}:{type:'card',data:x.card})}
+                              >
+                                👁️ {x.carousel?'캐러셀 카드뉴스 스튜디오에서 보기':'포스터 스튜디오에서 보기'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }):(
                       <div className="studio-chat-empty">
                         <p style={{margin:'0 0 8px',fontWeight:800,color:'#1e293b'}}>
                           💡 <b>무엇이든 편하게 물어보거나 홍보를 요청해 보세요!</b>
@@ -458,8 +533,9 @@ export default function OwnerMarketing({places,admin=false,onBack,onLinksSaved})
                         </p>
                         <ul>
                           <li>"인스타 카드뉴스로 대표 메뉴 4장 만들어줘"</li>
-                          <li>"성시경 먹방 느낌으로 재미있게 소개해줘"</li>
-                          <li>"주말 학생 할인 15% 이벤트 포스터 만들어줘"</li>
+                          <li>"카리나(또는 뉴진스) 먹방 추천 스타일로 카드뉴스 만들어줘"</li>
+                          <li>"주말 학생 할인 20% 이벤트 포스터 만들어줘"</li>
+                          <li>"3번 슬라이드 연예인을 차은우로 바꿔줘"</li>
                           <li>"사진을 광운대역 주변 풍경으로 바꾸고 싶어"</li>
                         </ul>
                       </div>

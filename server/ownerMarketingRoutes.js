@@ -98,12 +98,17 @@ export function createOwnerMarketingRouter(){
     const place=(await getCommunityPlaces()).items.find(p=>p.id===req.owner.placeId);
     const prompt=`당신은 인스타그램 전문 바이럴 마케터입니다. 월계1동 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 인스타그램 캐러셀(슬라이드 카드뉴스 3~5장)을 기획하세요.
 사장님 요청: "${brief}"
+[핵심 연예인/셀럽 원칙]
+- 사장님 요청 문구에 특정 연예인, 아이돌, 셀럽, 인플루언서(예: 카리나, 뉴진스, 아이유, 차은우 등)가 언급되어 있다면, 절대로 다른 인물로 바꾸지 말고 반드시 사장님이 지정한 그 인물(celebrityName)을 그대로 주인공으로 추천 슬라이드를 기획하세요!
+- 사장님이 특정 인물을 명시하지 않은 경우에만 '트렌디한 먹방 스타'나 '화제의 미식가'로 유연하게 설정하세요.
+
+[슬라이드 구성]
 - 표지(cover): 시선을 사로잡는 강력한 후킹 카피
 - 시그니처 메뉴(menu): 대표 메뉴의 군침 도는 묘사와 가격/포인트
-- 연예인/인플루언서 깜짝 추천·먹방(celebrity): 성시경, 백종원, 풍자 등 먹방 스타의 유쾌한 찬사와 리액션
+- 연예인/인플루언서 깜짝 추천·먹방(celebrity): 지정된 연예인의 유쾌한 찬사와 리액션
 - 특별 혜택(benefit): 인스타 저장/팔로우 시 누릴 수 있는 파격 혜택
 - 찾아오시는 길(location): 광운대역 인근 골목 위치와 방문 안내
-- 각 슬라이드마다 반드시 실제 웹 사진 검색어(imageQuery)를 정확히 명시하세요. (예: "성시경 먹방", "백종원 맛집", "${place?.name||'광운대'} 음식", "광운대역 맛집 골목" 등)
+- 각 슬라이드마다 반드시 실제 웹 사진 검색어(imageQuery)를 정확히 명시하세요. (예: "\${celebrityName} 먹방", "${place?.name||'광운대'} 음식", "광운대역 맛집 골목" 등)
 반드시 유효한 JSON만 반환하세요:
 ${CAROUSEL_GUIDE}`;
     const data=await chatJSON([{role:'system',content:prompt}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.7,maxTokens:1200,timeout:60000});
@@ -141,30 +146,44 @@ ${CAROUSEL_GUIDE}`;
   router.get('/campaigns/:placeId/:id/image',async(req,res)=>{const c=(await store.publicCampaigns(req.params.placeId)).find(x=>x.id===req.params.id),p=(await store.proposals(req.params.placeId)).find(x=>x.id===c?.proposalId&&x.status==='approved');if(!p?.image)return res.status(404).end();res.type('png').send(Buffer.from(p.image,'base64'));});
   router.patch('/proposals/:id',owner,async(req,res)=>{const status=req.body?.status,card=req.body?.card===undefined?undefined:cleanCard(req.body.card);if(status!==undefined&&!['approved','rejected'].includes(status))return res.status(400).json({error:'검토 상태가 올바르지 않아요.'});if(req.body?.card!==undefined&&!card)return res.status(400).json({error:'포스터 제목을 확인해 주세요.'});const row=(await store.reviewProposal(req.owner.placeId,req.params.id,status,card));if(!row)return res.status(404).json({error:'제안을 찾지 못했어요.'});res.json({id:row.id,status:row.status,card:row.card});});
 
-  // AI 홍보 대화: 사장님이 요청하면 처음부터 끝까지 인스타그램 캐러셀 + 실사 사진을 100% 완성해서 제공
-  router.post('/chat',owner,limit(20),async(req,res)=>{const message=clean(req.body?.message,1000),history=Array.isArray(req.body?.history)?req.body.history.slice(-8).filter(x=>['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,1000)})):[];if(!message)return res.status(400).json({error:'대화 내용을 입력해 주세요.'});try{
+  // AI 홍보 대화 및 실시간 수정: 대화로 즉시 캐러셀/포스터 기획 및 수정
+  router.post('/chat',owner,limit(20),async(req,res)=>{const message=clean(req.body?.message,1000),currentVisual=req.body?.currentVisual||null,history=Array.isArray(req.body?.history)?req.body.history.slice(-8).filter(x=>['user','assistant'].includes(x.role)&&typeof x.content==='string').map(x=>({role:x.role,content:x.content.slice(0,1000)})):[];if(!message)return res.status(400).json({error:'대화 내용을 입력해 주세요.'});try{
     const place=(await getCommunityPlaces()).items.find(p=>p.id===req.owner.placeId);
-    const system=`당신은 월계1동 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 인스타그램 전문 마케터이자 캐러셀 디자이너입니다.
-사장님이 홍보 요청이나 대화를 건네면, 항상 사장님의 고민을 해결해주는 따뜻하고 실전적인 조언과 함께, 실제 인스타그램 피드에 올릴 수 있는 **4~5장의 캐러셀(슬라이드 카드뉴스) JSON**을 \`\`\`json 코드 블록으로 완성해서 제공하세요.
-- 슬라이드 구성:
-  1장(cover): 강렬한 후킹 타이틀과 시선 집중 카피 (배경: 광운대/월계동 맛집 비주얼)
-  2장(menu): 대표 메뉴와 가격/맛 묘사 (배경: 대표 음식 사진)
-  3장(celebrity): 성시경, 백종원, 풍자 등 먹방 스타나 연예인의 극찬 리액션 (배경: 연예인 먹방 사진)
-  4장(benefit): 인스타 저장/팔로우 시 제공하는 깜짝 할인/음료수 혜택
-  5장(location): 광운대역 인근 골목 위치 안내 및 매장 정보
-- 각 슬라이드마다 적절한 웹 검색어(imageQuery)를 꼭 명시하세요. (예: "성시경 먹방", "백종원 맛집", "광운대역 맛집", "칼국수 맛집" 등)
+    const wantsPoster=/(포스터|단일\s*포스터|할인\s*포스터|포스터로|포스터\s*만들)/i.test(message) || (currentVisual?.type==='card' && !/(캐러셀|카드뉴스|슬라이드)/i.test(message));
+    
+    let contextNotice='';
+    if(currentVisual?.data){
+      contextNotice=`\n[현재 작업 중인 비주얼]\n유형: ${currentVisual.type==='carousel'?'인스타그램 캐러셀 카드뉴스':'단일 포스터'}\n현재 데이터: ${JSON.stringify(currentVisual.data)}\n사장님의 이번 메시지는 위 데이터에 대한 수정(연예인 변경, 문구 수정, 할인율 변경 등) 또는 새로운 요청입니다. 사장님의 수정 사항을 정확히 반영하여 변경된 전체 JSON을 제공하세요.\n`;
+    }
+
+    const system=`당신은 월계1동 [${place?.name||'동네 식당'} (${place?.kind||'음식점'})] 사장님의 홍보 마케팅 전문가이자 비주얼 디자이너입니다.
+사장님이 홍보 요청이나 수정 사항을 말하면, 친절하고 다정한 조언과 함께, 요청에 따라 **캐러셀(슬라이드 카드뉴스) 또는 단일 포스터 JSON**을 반드시 \`\`\`json 코드 블록으로 완성해서 제공하세요.
+${contextNotice}
+[원칙]
+1. 사장님이 특정 연예인, 아이돌, 셀럽(예: 카리나, 뉴진스, 아이유, 차은우 등)을 언급하거나 변경을 요청하면, 절대로 다른 인물로 바꾸지 말고 반드시 사장님이 지정한 그 인물(celebrityName 및 imageQuery)로 구성하세요!
+2. 사장님이 "포스터"를 원하면 단일 포스터 JSON(POSTER_GUIDE)을, "캐러셀/카드뉴스/스토리"를 원하면 캐러셀 JSON(CAROUSEL_GUIDE)을 제공하세요. (기본 판단: ${wantsPoster?'단일 포스터(card) 우선':'캐러셀(carousel) 우선'})
+3. 중요: 대화 답변 텍스트에는 사장님을 위한 다정하고 명쾌한 설명만 한글로 작성하세요. JSON 데이터는 반드시 오직 \`\`\`json \`\`\` 코드 블록 안에만 넣고, 대화 본문에 JSON 형식의 속성이나 중괄호 문자열을 절대 섞지 마세요.
 ${CAROUSEL_GUIDE}
 ${POSTER_GUIDE}`;
+
     const raw=await chat([{role:'system',content:system},...history,{role:'user',content:message}],{model:process.env.OWNER_TEXT_MODEL||textModel(),temperature:0.7,maxTokens:1300,timeout:60000});
-    const block=raw.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);let card=null,carousel=null;
-    if(block){
+    
+    // 1) 마크다운 코드 블록 또는 raw JSON 객체 탐지
+    let blockMatch=raw.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    if(!blockMatch){
+      const directMatch=raw.match(/(\{[\s\S]*?(?:"slides"|"layout")[\s\S]*?\})/);
+      if(directMatch)blockMatch=directMatch;
+    }
+
+    let card=null,carousel=null;
+    if(blockMatch){
       try{
-        const parsed=JSON.parse(block[1]);
+        const parsed=JSON.parse(blockMatch[1]);
         if(Array.isArray(parsed.slides)){
           carousel=cleanCarousel(parsed);
           if(carousel){
             carousel.aspectRatio='4:5';
-            // 모든 슬라이드에 대해 실제 웹 사진을 서버에서 100% 자동 발굴하여 바인딩
+            // 모든 슬라이드에 대해 실제 웹 사진을 서버에서 자동 발굴하여 바인딩
             await Promise.all(carousel.slides.map(async s=>{
               s.image = await searchSlideImage({
                 query: s.imageQuery,
@@ -175,13 +194,22 @@ ${POSTER_GUIDE}`;
               });
             }));
           }
-        }else{
+        }else if(parsed.title || parsed.layout){
           card=cleanCard(parsed);
         }
       }catch{}
     }
+
+    // 2) reply에서 모든 JSON 블록과 중괄호 JSON 데이터 영역을 깨끗이 제거하여 본문에 노출 방지
+    let cleanReply=raw.replace(/```(?:json)?[\s\S]*?```/g,'');
+    cleanReply=cleanReply.replace(/\{[\s\S]*?(?:"slides"|"layout"|"title"|"concept")[\s\S]*?\}/g,'');
+    cleanReply=cleanReply.trim();
+    if(!cleanReply){
+      cleanReply=carousel?'📸 인스타그램 캐러셀 카드뉴스를 우측 스튜디오에 반영했어요! 슬라이드를 확인해 보세요.':card?'📜 포스터를 우측 스튜디오에 반영했어요! 확인해 보세요.':'말씀해 주신 내용으로 홍보물을 준비했어요.';
+    }
+
     res.json({
-      reply:raw.replace(/```(?:json)?\s*\{[\s\S]*?\}\s*```/,'').trim()||(carousel?'📸 인스타그램 캐러셀 카드뉴스를 제작했어요! 우측 스튜디오에서 확인해 보세요.':card?'포스터를 만들었어요. 우측에서 확인해 보세요.':raw),
+      reply:cleanReply,
       card,
       carousel
     });
