@@ -340,3 +340,5 @@
 .search-panel textarea::placeholder{color:#a5a8ad}
 .search-panel:focus-within{box-shadow:0 0 0 3px #d5f65b,0 6px 20px #173d3214!important}
 @media(max-width:760px){.search-panel{padding:20px 20px 16px!important}.search-panel textarea{font-size:16px;min-height:84px}}
+
+.community .button.admin-danger{color:#b42318!important;background:#fde8e6!important;margin-top:10px}

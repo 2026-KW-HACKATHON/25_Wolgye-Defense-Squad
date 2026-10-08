@@ -4,10 +4,10 @@ import {RoleBadge} from './PlaceInfo';
 
 // 메인 상단에서 옆으로 넘겨보는 배너. 장을 추가하거나 글귀를 바꾸려면 아래 slides만 고치면 된다.
 // 배경 사진: public/community/wolgye/ 에 사진을 넣고 BACKGROUNDS에 파일 이름을 적는다. 남이 찍은 사진이면 credit에 출처를 적는다.
-const BACKGROUNDS={post:null,owner:null}; // 예: post:{src:'/community/wolgye/alley.jpg',credit:''}
+const BACKGROUNDS={post:{src:'/community/wolgye/kwangwoon-station.jpg',credit:'광운대역 · Cocapepper (CC0)'},owner:null}; // 예: post:{src:'/community/wolgye/alley.jpg',credit:''}
 export default function HomeCarousel({post,place,onOpenPost,onCompose,onOwner}){
  const slides=[
-  post?{key:'post',onClick:()=>onOpenPost(post),image:post.image,icon:<NotebookPen size={56}/>,
+  post?{key:'post',onClick:()=>onOpenPost(post),image:post.image,background:BACKGROUNDS.post,icon:<NotebookPen size={56}/>,
     kicker:`방금 올라온 소식 · ${post.type}`,title:post.title,body:post.body,
     meta:<><RoleBadge role={post.authorRole}/> {post.author}{place?` · ${place.name}`:''} · {post.observedAt} 확인</>}
    :{key:'post',onClick:onCompose,icon:<Plus size={56}/>,background:BACKGROUNDS.post,kicker:'아직 올라온 소식이 없어요',

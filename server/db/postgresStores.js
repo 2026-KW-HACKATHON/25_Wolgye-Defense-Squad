@@ -34,6 +34,8 @@ export function createPostgresCommunityStore(pool){
       const row=applyInfoEdit(old,placeId,changes,editor);if(!row)return null;
       await c.query('INSERT INTO wolgye.place_info(id,data) VALUES ($1,$2) ON CONFLICT(id) DO UPDATE SET data=excluded.data',[placeId,row]);return row;
     }),
+    removePostAsAdmin:async id=>(await pool.query('DELETE FROM wolgye.posts WHERE id=$1',[id])).rowCount>0,
+    removePlaceAsAdmin:id=>transaction(pool,async c=>{const n=(await c.query('DELETE FROM wolgye.places WHERE id=$1',[id])).rowCount;if(n)await c.query("DELETE FROM wolgye.posts WHERE data->>'placeId'=$1",[id]);return n>0;}),
     removePost:async(id,token)=>(await pool.query("DELETE FROM wolgye.posts WHERE id=$1 AND data->>'ownerHash'=$2",[id,hash(token)])).rowCount>0
   };
 }

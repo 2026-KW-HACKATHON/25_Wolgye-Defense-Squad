@@ -68,6 +68,8 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
     }catch{res.status(502).json({error:'가게 정보를 저장하지 못했어요. 다시 시도해 주세요.'});}
   });
   router.post('/posts',save);router.put('/posts/:id',save);
-  router.delete('/posts/:id',async(req,res)=>{try{if(!await store.removePost(req.params.id,req.contributor))return res.status(403).json({error:'내가 작성한 소식만 삭제할 수 있어요.'});res.json({ok:true});}catch{res.status(503).json({error:'공용 저장소에 연결할 수 없어 삭제하지 못했어요.'});}});
+  // 관리자는 누구의 소식이든, 이웃이 등록한 장소든 지울 수 있다(부적절한 글 대응).
+  router.delete('/places/:id',async(req,res)=>{try{if(!req.isAdmin)return res.status(403).json({error:'관리자만 장소를 지울 수 있어요.'});if(!req.params.id.startsWith('local-'))return res.status(400).json({error:'이웃이 등록한 장소만 지울 수 있어요.'});if(!await store.removePlaceAsAdmin(req.params.id))return res.status(404).json({error:'장소를 찾지 못했어요.'});res.json({ok:true});}catch{res.status(503).json({error:'장소를 지우지 못했어요.'});}});
+  router.delete('/posts/:id',async(req,res)=>{try{if(req.isAdmin&&await store.removePostAsAdmin(req.params.id))return res.json({ok:true});if(!await store.removePost(req.params.id,req.contributor))return res.status(403).json({error:'내가 작성한 소식만 삭제할 수 있어요.'});res.json({ok:true});}catch{res.status(503).json({error:'공용 저장소에 연결할 수 없어 삭제하지 못했어요.'});}});
   return router;
 }

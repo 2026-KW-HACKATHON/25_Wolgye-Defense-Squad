@@ -25,6 +25,9 @@ export function createCommunityStore(file=path.resolve('.local-data/community.js
     placeInfo:()=>data.placeInfo,
     contributionStats:token=>contributionStats({posts:data.posts,places:data.places,infos:data.placeInfo,token,hash:owner}),
     savePlaceInfo:(placeId,changes,editor)=>{const row=applyInfoEdit(data.placeInfo[placeId],placeId,changes,editor);if(!row)return null;data.placeInfo[placeId]=row;persist();return row;},
+    // 관리자 전용: 작성자와 상관없이 지운다.
+    removePostAsAdmin:id=>{const i=data.posts.findIndex(p=>p.id===id);if(i<0)return false;data.posts.splice(i,1);persist();return true;},
+    removePlaceAsAdmin:id=>{const i=data.places.findIndex(p=>p.id===id);if(i<0)return false;data.places.splice(i,1);data.posts=data.posts.filter(p=>p.placeId!==id);persist();return true;},
     removePost:(id,token)=>{const i=data.posts.findIndex(p=>p.id===id&&p.ownerHash===owner(token));if(i<0)return false;data.posts.splice(i,1);persist();return true;}
   };
 }

@@ -14,7 +14,9 @@
     "share": "node scripts/share-server.mjs",
     "discord:register": "node scripts/discord-register.mjs",
     "discord:bot": "node scripts/discord-bot.mjs",
-    "db:setup": "node scripts/db-setup.mjs"
+    "db:setup": "node scripts/db-setup.mjs",
+    "demo:seed": "node scripts/demo-seed.mjs",
+    "demo:remove": "node scripts/demo-seed.mjs --remove"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

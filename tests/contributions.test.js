@@ -64,3 +64,24 @@ test('anyone can edit place info; owner and neighbor edits are labelled and kept
     assert.equal(createCommunityStore(file).placeInfo()[place.id].fields.menu.value,'떡볶이 4500원');
   }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
 });
+
+test('only an admin can delete another neighbor post or a neighbor-registered place',async()=>{
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'wolgye-admin-')),file=path.join(dir,'community.json');
+  const store=createCommunityStore(file),app=express();app.use(express.json());
+  app.use((req,res,next)=>{req.isAdmin=req.get('x-admin')==='yes';next();});
+  app.use(createContributionRouter({store,catalog:async()=>({items:store.places()})}));
+  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
+  const url=`http://127.0.0.1:${server.address().port}`;
+  const call=async(route,method,body,token,admin='no')=>{const r=await fetch(url+route,{method,headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`,'x-admin':admin},body:body?JSON.stringify(body):undefined});return {status:r.status,...await r.json()};};
+  try{
+    const owner='a'.repeat(64),other='b'.repeat(64);
+    const place=(await call('/places','POST',{name:'지울 가게',kind:'분식',address:'월계1동',lat:37.6193,lng:127.0583},owner)).place;
+    const post=(await call('/posts','POST',{placeId:place.id,title:'부적절',body:'광고 글',author:'이웃',type:'방문 이야기',observedAt:'2026-10-01'},owner)).post;
+    assert.equal((await call('/posts/'+post.id,'DELETE',undefined,other)).status,403);
+    assert.equal((await call('/posts/'+post.id,'DELETE',undefined,other,'yes')).status,200);
+    assert.equal(store.posts().length,0);
+    assert.equal((await call('/places/'+place.id,'DELETE',undefined,other)).status,403);
+    assert.equal((await call('/places/'+place.id,'DELETE',undefined,other,'yes')).status,200);
+    assert.equal(store.places().length,0);
+  }finally{await new Promise(r=>server.close(r));fs.rmSync(dir,{recursive:true,force:true});}
+});
