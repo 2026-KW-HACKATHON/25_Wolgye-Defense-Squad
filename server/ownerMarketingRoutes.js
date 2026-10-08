@@ -81,7 +81,7 @@ ${POSTER_GUIDE}`;
   router.get('/keywords',owner,async(req,res)=>res.json({items:await store.keywords(req.owner.placeId)}));
   router.put('/keywords',owner,async(req,res)=>{const values=req.body?.items;if(!Array.isArray(values)||values.length>10||values.some(v=>typeof v!=='string'||!v.trim()||v.length>30))return res.status(400).json({error:'키워드는 최대 10개, 각각 30자 이하로 입력해 주세요.'});const cleaned=[...new Set(values.map(v=>v.trim().replace(/^#+/,'')))].filter(Boolean);res.json({items:await store.saveKeywords(req.owner.placeId,cleaned)});});
   router.get('/delivery-links',owner,async(req,res)=>res.json({items:await store.deliveryLinks(req.owner.placeId)}));
-  router.put('/delivery-links',owner,async(req,res)=>{const links=cleanDeliveryLinks(req.body?.items);if(!links)return res.status(400).json({error:'배달앱에서 복사한 https 가게 링크를 확인해 주세요.'});res.json({items:await store.saveDeliveryLinks(req.owner.placeId,links)});});
+  router.put('/delivery-links',owner,async(req,res)=>{const links=cleanDeliveryLinks(req.body?.items);if(!links)return res.status(400).json({error:'입력한 주소를 저장하지 못했어요. 배민·요기요·쿠팡이츠 앱의 가게 화면에서 복사한 HTTPS 공유 링크만 등록할 수 있어요.'});res.json({items:await store.saveDeliveryLinks(req.owner.placeId,links)});});
   router.get('/report',owner,async(req,res)=>res.json((await store.report(req.owner.placeId))));
   return router;
 }

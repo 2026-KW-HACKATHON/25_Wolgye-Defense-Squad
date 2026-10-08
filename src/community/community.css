@@ -459,3 +459,4 @@
 .community .group-suggestion-list small{color:#667363}
 .community .suggest-group-list{display:grid;gap:8px;margin-top:16px}
 .delivery-links{padding:18px;border:1px solid #dfe9bd;border-radius:16px;background:#f7faef;margin:18px 0}.delivery-links h4{margin:0 0 7px}.delivery-links p{margin:0 0 13px}.delivery-links>div{display:flex;flex-wrap:wrap;gap:8px}
+.place-delivery{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.place-delivery a{display:inline-flex;align-items:center;padding:7px 10px;border-radius:999px;background:#eef5d9;color:#273b1a;font-size:13px;font-weight:700;text-decoration:none}.place-delivery a:hover,.place-delivery a:focus-visible{background:#d5f260}
