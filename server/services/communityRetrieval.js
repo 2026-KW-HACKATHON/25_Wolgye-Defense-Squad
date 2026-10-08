@@ -22,11 +22,18 @@ function tokens(text) {
     return word.length > 2 ? [word, ...Array.from({length:word.length-1},(_,i)=>word.slice(i,i+2))] : [word];
   }) || [])];
 }
-export function retrieveCommunity(message, places, now=Date.now()) {
+export function searchableRequest(message) {
+  // Money limits describe a condition, not a shop name or cuisine.
+  return String(message).replace(/(?<![가-힣])(?:\d+(?:\.\d+)?\s*)?만\s*(?:(?:\d+|오|삼|이|일|사|육|칠|팔|구)\s*천)?\s*원?\s*(?:이하|미만|이내|정도|까지|안쪽)?(?![가-힣])/g,' ')
+    .replace(/(?<![가-힣])\d[\d,]*\s*원\s*(?:이하|미만|이내|정도|까지|안쪽)?(?![가-힣])/g,' ')
+    .replace(/\b(?:예산|가격|금액)\b/g,' ').trim();
+}
+export function retrieveCommunity(message, places, now=Date.now(), limit=15) {
   // "국물"처럼 가게 업종에 직접 나오지 않는 표현은 모임 추천과 같은 사전으로 넓혀 검색한다.
-  const query=tokens(`${message} ${(String(message).match(/[가-힣]+/g)||[]).flatMap(w=>expand(w).slice(1)).join(' ')}`);
+  const subject=searchableRequest(message);
+  const query=tokens(`${subject} ${(subject.match(/[가-힣]+/g)||[]).flatMap(w=>expand(w).slice(1)).join(' ')}`);
   const docs=places.flatMap(p=>[
-    {placeId:p.id,text:`${p.name} ${p.kind} ${p.category||''}`,source:'listing'},
+    {placeId:p.id,text:`${p.name} ${p.kind} ${p.category||''} ${(p.ownerKeywords||[]).join(' ')}`,source:'listing'},
     ...(p.reports||[]).map(report=>({placeId:p.id,text:report.body,source:'report',report}))
   ]).map(d=>({...d,terms:tokens(d.text)}));
   const avg=docs.reduce((n,d)=>n+d.terms.length,0)/Math.max(docs.length,1);
@@ -47,6 +54,6 @@ export function retrieveCommunity(message, places, now=Date.now()) {
   const items=[...byPlace].map(([id,retrieval])=>{
     const place=places.find(p=>p.id===id);
     return {...place,reports:retrieval.reports,retrievalScore:retrieval.score,conditionChecks:inspectConditions(message,place)};
-  }).filter(p=>!p.conditionChecks.some(c=>c.status==='violated')).slice(0,15);
+  }).filter(p=>!p.conditionChecks.some(c=>c.status==='violated')).slice(0,limit);
   return {items,method:'lexical-bm25',searchedPlaces:places.length,searchedDocuments:docs.length};
 }

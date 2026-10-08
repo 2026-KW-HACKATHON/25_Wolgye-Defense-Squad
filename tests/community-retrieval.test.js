@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {retrieveCommunity,inspectConditions} from '../server/services/communityRetrieval.js';
+import {retrieveCommunity,inspectConditions,searchableRequest} from '../server/services/communityRetrieval.js';
 
 test('retrieves a relevant older report even when newer unrelated reports exist',()=>{
   const places=[{id:'a',name:'골목집',kind:'한식',reports:[
@@ -30,4 +30,19 @@ test('freshness uses observation date and cannot promote unrelated new reports',
     {id:'other',kind:'한식',reports:[{id:'x',body:'맛있어요',observedAt:'2026-10-07'}]}
   ],Date.parse('2026-10-07'));
   assert.deepEqual(r.items.map(p=>p.id),['new','old']);
+});
+test('search can return every matching place while recommendation keeps its shortlist',()=>{
+  const places=Array.from({length:20},(_,i)=>({id:String(i),name:`한식 가게 ${i}`,kind:'한식'}));
+  assert.equal(retrieveCommunity('한식',places).items.length,15);
+  assert.equal(retrieveCommunity('한식',places,Date.now(),Infinity).items.length,20);
+});
+test('owner keywords can make a place searchable',()=>{
+  const places=[{id:'a',name:'골목집',kind:'한식',ownerKeywords:['혼밥']}];
+  assert.deepEqual(retrieveCommunity('혼밥',places).items.map(p=>p.id),['a']);
+});
+test('budget phrases are conditions, not matches against shop names',()=>{
+  assert.equal(searchableRequest('만원이하'),'');
+  assert.equal(searchableRequest('한식 만원 이하'),'한식');
+  assert.equal(searchableRequest('만원닭발'),'만원닭발');
+  assert.equal(retrieveCommunity('만원이하',[{id:'a',name:'만원닭발',kind:'술집'}]).items.length,0);
 });

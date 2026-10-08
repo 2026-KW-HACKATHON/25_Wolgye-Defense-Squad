@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseCondition,rankGroup,recommendGroup,menuPrices,openHours} from '../server/services/groupRecommend.js';
+import {parseCondition,rankGroup,recommendGroup,menuPrices,openHours,openingStatus} from '../server/services/groupRecommend.js';
 
 test('conditions are split into wants, excludes, budget and visit hour',()=>{
   assert.deepEqual(parseCondition('만원 이하로 국물 있는 거 먹고 싶어요'),{raw:'만원 이하로 국물 있는 거 먹고 싶어요',wants:['국물'],excludes:[],budget:10000,hour:null});
@@ -39,4 +39,17 @@ test('closed hours exclude a place and the result explains each member',async()=
   assert.ok(!result.items.some(p=>p.id==='b'),'21시에 닫는 가게');
   assert.equal(result.understood[1].hour,23);
   assert.ok(result.items.every(p=>p.memberChecks.length===2));
+});
+test('simple registered hours exclude a shop closed now; missing or complex hours remain unknown',()=>{
+  const hours=value=>({info:info({hours:[value,'owner']})});
+  const late=Date.parse('2026-10-08T13:00:00Z'); // 22:00 in Seoul
+  assert.equal(openingStatus(hours('매일 11:00~21:00'),{at:late}),'closed');
+  assert.equal(openingStatus(hours('매일 11:00~21:00'),{visitHour:12}),'open');
+  assert.equal(openingStatus(hours('평일 11:00~21:00, 주말 12:00~22:00'),{at:late}),'unknown');
+  assert.equal(openingStatus({}, {at:late}),'unknown');
+  const result=rankGroup([
+    {id:'closed',name:'닫힌 국밥',kind:'한식',...hours('11:00~21:00')},
+    {id:'unknown',name:'영업시간 없는 국밥',kind:'한식'}
+  ],members([['가','국밥']]),3,late);
+  assert.deepEqual(result.items.map(item=>item.place.id),['unknown']);
 });

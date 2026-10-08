@@ -13,16 +13,25 @@ export function placeCategory(place) {
 }
 
 export function distanceMeters(origin,place) {
-  if(!origin||!Number.isFinite(Number(place.lat))||!Number.isFinite(Number(place.lng)))return Infinity;
+  if(!origin||place.lat==null||place.lng==null||!Number.isFinite(Number(place.lat))||!Number.isFinite(Number(place.lng)))return Infinity;
   const radians=n=>n*Math.PI/180;
   const dLat=radians(Number(place.lat)-origin.lat),dLng=radians(Number(place.lng)-origin.lng);
   const a=Math.sin(dLat/2)**2+Math.cos(radians(origin.lat))*Math.cos(radians(Number(place.lat)))*Math.sin(dLng/2)**2;
   return 6371000*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
+export function travelEstimate(origin,place) {
+  const straightMeters=distanceMeters(origin,place);
+  if(!Number.isFinite(straightMeters))return null;
+  // A local approximation only; streets, crossings and route choices are not known here.
+  const walkMinutes=Math.max(1,Math.ceil(straightMeters*1.3/75));
+  const distance=straightMeters<1000?`${Math.round(straightMeters/10)*10}m`:`${(straightMeters/1000).toFixed(1)}km`;
+  return {distance,walkMinutes};
+}
+
 export function browsePlaces(places,{category='전체',sort='name',location=null}={}) {
   const selected=places.filter(place=>category==='전체'||placeCategory(place)===category);
   if(sort==='distance'&&location)selected.sort((a,b)=>distanceMeters(location,a)-distanceMeters(location,b)||a.name.localeCompare(b.name,'ko'));
-  else selected.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
+  else if(sort!=='relevance')selected.sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   return selected;
 }

@@ -75,6 +75,22 @@ export function openHours(text){
   return open>=0&&open<24&&close<=36?{open,close}:null;
 }
 
+export function openingStatus(place,{at=Date.now(),visitHour=null}={}){
+  const text=String(place.info?.fields?.hours?.value||'').trim();
+  if(!text)return 'unknown';
+  // Only an unqualified daily schedule can establish that a shop is closed.
+  // Breaks, weekdays, holidays and multiple ranges need richer structured data.
+  const simple=text.replace(/^매일\s*/,'').trim();
+  if(/^(?:24시간|24시간\s*영업)$/.test(simple))return 'open';
+  if(!/^(?:오전|오후)?\s*\d{1,2}(?::\d{2})?\s*시?\s*[~\-–]\s*(?:오전|오후)?\s*\d{1,2}(?::\d{2})?\s*시?$/.test(simple))return 'unknown';
+  const range=openHours(simple);
+  if(!range)return 'unknown';
+  const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(at));
+  const hour=visitHour??Number(parts.find(p=>p.type==='hour')?.value)+Number(parts.find(p=>p.type==='minute')?.value)/60;
+  const time=hour<range.open?hour+24:hour;
+  return time>=range.open&&time<range.close?'open':'closed';
+}
+
 const source=f=>`${f.role==='owner'?'사장님 확인':'이웃 정보'} ${f.observedAt}`;
 
 export function evaluate(place,condition){
@@ -107,18 +123,18 @@ export function evaluate(place,condition){
     else{const low=Math.min(...prices);checks.push(low<=condition.budget?{kind:'budget',label,status:'met',evidence:`${low.toLocaleString('ko-KR')}원 메뉴 있음 (${source(fields.menu)})`}:{kind:'budget',label,status:'violated',evidence:`가장 싼 메뉴 ${low.toLocaleString('ko-KR')}원 (${source(fields.menu)})`});}
   }
   if(condition.hour!==null&&condition.hour!==undefined){
-    const hours=openHours(fields.hours?.value),label=`${condition.hour}시 방문`;
-    if(!hours)checks.push({kind:'hour',label,status:'unknown',evidence:fields.hours?'영업시간 형식을 읽지 못했어요':'등록된 영업시간이 없어요'});
-    else{const t=condition.hour<hours.open?condition.hour+24:condition.hour;checks.push(t>=hours.open&&t<hours.close?{kind:'hour',label,status:'met',evidence:`영업시간 ${fields.hours.value} (${source(fields.hours)})`}:{kind:'hour',label,status:'violated',evidence:`영업시간 ${fields.hours.value} (${source(fields.hours)})`});}
+    const status=openingStatus(place,{visitHour:condition.hour}),label=`${condition.hour}시 방문`;
+    checks.push(status==='unknown'?{kind:'hour',label,status:'unknown',evidence:fields.hours?'영업시간이 복잡하거나 형식을 읽지 못했어요':'등록된 영업시간이 없어요'}:{kind:'hour',label,status:status==='open'?'met':'violated',evidence:`영업시간 ${fields.hours.value} (${source(fields.hours)})`});
   }
   return checks;
 }
 
-export function rankGroup(places,members,limit=3){
+export function rankGroup(places,members,limit=3,at=Date.now()){
   const scored=places.map(place=>{
     const perMember=members.map(m=>({name:m.name,checks:evaluate(place,m.parsed)}));
     const all=perMember.flatMap(m=>m.checks);
-    const violated=all.some(c=>c.status==='violated');
+    const closedNow=!members.some(m=>m.parsed.hour!=null)&&openingStatus(place,{at})==='closed';
+    const violated=closedNow||all.some(c=>c.status==='violated');
     const wantMembers=perMember.filter(m=>m.checks.some(c=>c.kind==='want'&&c.status==='met')).length;
     const askers=members.filter(m=>m.parsed.wants.length).length;
     const met=all.filter(c=>c.status==='met').length,unknown=all.filter(c=>c.status==='unknown').length;
@@ -157,5 +173,5 @@ export async function recommendGroup(input,{getPlaces,useAI=true}={}){
   const understood=members.map(m=>({name:m.name,wants:m.parsed.wants,excludes:m.parsed.excludes,budget:m.parsed.budget,hour:m.parsed.hour}));
   return {items,understood,
     answer:items.length?`${ranked.considered}곳 중 조건이 맞지 않는 ${ranked.excluded}곳을 빼고 ${items.length}곳을 골랐어요.`:'모든 참가자의 조건을 함께 만족하는 후보를 찾지 못했어요. 조건을 조금 바꾸거나 가게 정보를 보완해 주세요.',
-    notice:`참가자별 조건을 따로 확인했어요. ${aiUsed?'음식 표현은 AI로 넓혀 해석했고, ':''}예산·시간은 사장님이나 이웃이 남긴 가게 정보로만 판단해요. 정보가 없으면 ‘확인 필요’로 남기고 조건을 완화하지 않아요.`};
+    notice:`참가자별 조건을 따로 확인했어요. ${aiUsed?'음식 표현은 AI로 넓혀 해석했고, ':''}예산·시간은 사장님이나 이웃이 남긴 가게 정보로만 판단해요. 방문 시간이 없으면 현재 시간을 기준으로 확인해요. 명확한 영업시간상 닫힌 가게만 제외하고, 정보가 없거나 복잡하면 ‘확인 필요’로 남겨요.`};
 }

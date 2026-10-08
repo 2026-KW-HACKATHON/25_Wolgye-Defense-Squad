@@ -271,6 +271,8 @@
 
 /* 찾기 탐색 (chim 브랜치에서 옮김, iOS 톤으로 조정) */
 .community .find-heading{flex-wrap:wrap}
+.community .travel-info{display:inline-block;margin-left:8px;color:#476a55;font-size:12px;font-weight:650;white-space:normal}
+.community .find-recommendations{margin:28px 0 34px}
 .community .find-list-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end}
 .community .place-sort-label{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;flex-shrink:0}
 .community .place-sort-label select{border:0;border-radius:999px;background:#7676801f;color:var(--ink);padding:7px 12px;font-size:13px;font-weight:600}

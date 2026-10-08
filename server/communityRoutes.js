@@ -1,9 +1,14 @@
 import express from 'express';
-import {getCommunityPlaces,recommendCommunity} from './services/communityService.js';
+import {getCommunityPlaces,recommendCommunity,searchCommunity} from './services/communityService.js';
 export const communityRoutes=express.Router();
 let active=0, windowStart=0, count=0;
 communityRoutes.get('/places',async(req,res)=>{
   try{res.json(await getCommunityPlaces());}catch(e){res.status(502).json({error:e.message});}
+});
+communityRoutes.post('/search',async(req,res)=>{
+  const message=req.body?.message;
+  if(typeof message!=='string'||!message.trim()||message.length>3000)return res.status(400).json({error:'검색어를 1~3000자 사이로 입력해 주세요.'});
+  try{res.json(await searchCommunity(message.trim()));}catch(e){res.status(502).json({error:e.message});}
 });
 communityRoutes.post('/recommend',async(req,res)=>{
   const message=req.body?.message;
