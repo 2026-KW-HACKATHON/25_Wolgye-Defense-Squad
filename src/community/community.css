@@ -468,3 +468,5 @@
 
 /* Keep menu geometry independent of the visible row contents. */
 .place-info .fact-list>.menu-info-row{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;width:100%}.menu-info-row>.info-value{width:100%;min-width:0}.menu-board table{table-layout:fixed;width:100%}.menu-board th:last-child,.menu-board td:last-child{width:130px;white-space:normal;overflow-wrap:anywhere}.modal{scrollbar-gutter:stable}
+
+.community .modal h3.place-neighbor-heading{margin-top:32px;margin-bottom:14px}
