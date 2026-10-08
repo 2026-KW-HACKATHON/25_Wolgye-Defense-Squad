@@ -5,7 +5,7 @@ import {getCommunityPlaces} from './services/communityService.js';
 import {recommendGroup} from './services/groupRecommend.js';
 import {createFileGroupStore,defaultGroupStore} from './services/groupStore.js';
 
-export function createGroupRouter({file,store,recommend=members=>recommendGroup(members,{getPlaces:getCommunityPlaces}),chooseAI=chooseFinalWithAI}={}) {
+export function createGroupRouter({file,store,getPlaces=getCommunityPlaces,recommend=(members,options)=>recommendGroup(members,{getPlaces,...options}),chooseAI=chooseFinalWithAI}={}) {
   store=store||(file?createFileGroupStore(file):defaultGroupStore());
   const router=express.Router(),working=new Set(),finalizing=new Set();
   // viewer: 요청(req) 또는 참가자 id. 비밀 조건은 본인에게만 내용이 보이고, 다른 사람에게는 '비밀 조건'으로 가린다(추천에는 그대로 쓰임).
@@ -29,7 +29,7 @@ export function createGroupRouter({file,store,recommend=members=>recommendGroup(
   router.post('/',run(async(req,res)=>{
     if(!valid(req.body.name,40)||!valid(req.body.nickname,30))fail(400,'모임 이름과 닉네임을 입력해 주세요.');
     let id;do{id=randomBytes(6).toString('hex').toUpperCase();}while(await store.get(id));
-    const m=member(req.body.nickname.trim()),g={id,name:req.body.name.trim(),ownerId:m.id,members:[m],revision:0,candidates:null,votes:{},submittedVotes:{},decision:null,answer:'',notice:''};
+    const m=member(req.body.nickname.trim()),g={id,name:req.body.name.trim(),ownerId:m.id,members:[m],suggestions:[],revision:0,candidates:null,votes:{},submittedVotes:{},decision:null,answer:'',notice:''};
     await store.create(g);res.status(201).json({group:view(g,m.id),token:m.token,memberId:m.id});
   }));
   router.param('id',(req,res,next,id)=>{req.params.id=id.toUpperCase();next();});
@@ -42,6 +42,21 @@ export function createGroupRouter({file,store,recommend=members=>recommendGroup(
     if(!valid(req.body.condition,240))fail(400,'조건은 1~240자로 입력해 주세요.');
     const g=await store.mutate(req.params.id,g=>{const m=authorize(g,req);m.condition=req.body.condition.trim();m.conditionPrivate=req.body.private===true;clear(g);return view(g,req);});res.json({group:g});
   }));
+  router.post('/:id/suggestions',run(async(req,res)=>{
+    const placeId=req.body?.placeId;
+    if(typeof placeId!=='string'||placeId.length>100||!placeId.trim())fail(400,'가게를 선택해 주세요.');
+    authorize(await store.get(req.params.id),req);
+    const place=(await getPlaces()).items.find(p=>p.id===placeId);
+    if(!place)fail(404,'현재 등록된 가게를 찾지 못했어요.');
+    const group=await store.mutate(req.params.id,g=>{
+      const m=authorize(g,req);g.suggestions||=[];
+      if(g.suggestions.some(s=>s.placeId===placeId))return view(g,req);
+      if(g.suggestions.length>=20)fail(409,'모임에 제안할 수 있는 가게는 최대 20곳이에요.');
+      g.suggestions.push({placeId,placeName:place.name,by:m.name,createdAt:new Date().toISOString()});
+      return view(g,req);
+    });
+    res.json({group});
+  }));
   router.post('/:id/recommend',run(async(req,res)=>{
     if(working.size>=2||working.has(req.params.id))fail(429,'후보를 찾고 있어요. 잠시 후 다시 시도해 주세요.');
     const lease=randomUUID();working.add(req.params.id);
@@ -53,7 +68,7 @@ export function createGroupRouter({file,store,recommend=members=>recommendGroup(
         if(g.lastRequest&&Date.now()-g.lastRequest<15000)fail(429,'15초 후 다시 시도해 주세요.');
         g.lastRequest=Date.now();g.recommendLease=lease;return structuredClone(g);
       });
-      const result=await recommend(snapshot.members.map(m=>({name:m.name,condition:m.condition})));
+      const result=await recommend(snapshot.members.map(m=>({name:m.name,condition:m.condition})),{suggestedIds:(snapshot.suggestions||[]).map(s=>s.placeId)});
       const group=await store.mutate(req.params.id,g=>{if(g.revision!==snapshot.revision||g.recommendLease!==lease)fail(409,'참가자나 조건이 바뀌었어요. 다시 추천해 주세요.');g.candidates=result.items;g.answer=result.answer;g.notice=result.notice;g.understood=result.understood||null;g.votes={};g.submittedVotes={};g.decision=null;g.revision++;g.recommendLease=null;return view(g,req);});res.json({group});
     }finally{
       working.delete(req.params.id);

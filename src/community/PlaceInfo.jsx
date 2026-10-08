@@ -17,6 +17,7 @@ export function PlaceInfoView({place,onEdit}){
    <div><span>전화</span><b>{place.phone||'등록 정보 없음'}</b></div>
    {INFO_FIELDS.map(([key,label])=>{const f=fields[key];return <div key={key}><span>{label}</span>{f?<b className="info-value">{f.value}<small><RoleBadge role={f.role}/> {f.author} · {f.observedAt} 확인{f.role!=='owner'&&' · 사장님 확인 전'}</small></b>:<b className="unknown">아직 정보가 없어요</b>}</div>;})}
   </div>
+  {!!Object.keys(place.deliveryLinks||{}).length&&<div className="delivery-links"><h4>배달로 주문하기</h4><p className="muted">사장님이 등록한 링크예요. 주문과 결제는 배달앱에서 진행돼요.</p><div>{[['baemin','배달의민족'],['yogiyo','요기요'],['coupang','쿠팡이츠']].filter(([key])=>place.deliveryLinks[key]).map(([key,label])=><a className="button outline" key={key} href={place.deliveryLinks[key]} target="_blank" rel="noopener noreferrer">{label}에서 주문 ↗</a>)}</div></div>}
   {!!history.length&&<details className="recommendation-info"><summary>수정 기록 ({history.length})</summary>{history.map((h,i)=><article className="place-update" key={i}><b>{INFO_FIELDS.find(f=>f[0]===h.field)?.[1]||h.field}</b><p>{h.before||'(없음)'} → {h.after||'(삭제)'}</p><small><RoleBadge role={h.role}/> {h.author} · {h.observedAt} 확인</small></article>)}</details>}
  </section>;
 }

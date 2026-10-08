@@ -447,3 +447,15 @@
 .price-checks{display:flex;flex-direction:column;gap:6px;margin:8px 0}
 .price-check{font-size:13px;font-weight:600;padding:6px 10px;border-radius:12px;background:#f2f2f7;color:var(--muted)}
 .price-check.met{background:#eef6d6;color:var(--ink)}
+.community .post-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.community .post-actions button{display:inline-flex;align-items:center;gap:5px;border:1px solid #d5dfcf;border-radius:999px;padding:7px 10px;font-size:12px;font-weight:700;background:#fff;white-space:nowrap}
+.community .post-actions button:hover,.community .post-actions button:focus-visible{background:#eef6dd}
+.community .post-actions button[aria-pressed="true"]{background:#e9f3c9;border-color:#b9d682}
+.community .group-suggestions{margin:20px 0;padding:18px;background:#f2f7e8;border:1px solid #d7e5bd;border-radius:12px}
+.community .group-suggestions h3{font-size:17px}
+.community .group-suggestions p{margin:6px 0 12px}
+.community .group-suggestion-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.community .group-suggestion-list>span{padding:7px 10px;background:white;border-radius:8px;font-size:13px}
+.community .group-suggestion-list small{color:#667363}
+.community .suggest-group-list{display:grid;gap:8px;margin-top:16px}
+.delivery-links{padding:18px;border:1px solid #dfe9bd;border-radius:16px;background:#f7faef;margin:18px 0}.delivery-links h4{margin:0 0 7px}.delivery-links p{margin:0 0 13px}.delivery-links>div{display:flex;flex-wrap:wrap;gap:8px}

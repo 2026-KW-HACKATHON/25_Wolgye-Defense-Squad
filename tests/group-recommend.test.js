@@ -41,6 +41,19 @@ test('closed hours exclude a place and the result explains each member',async()=
   assert.ok(result.items.every(p=>p.memberChecks.length===2));
 });
 
+test('a suggested place is favored only among eligible places serving the same number of members',()=>{
+  const list=members([['가','만원 이하 국물'],['나','중식 빼고 저녁 7시']]);
+  const normal=rankGroup(places,list).items.map(item=>item.place.id);
+  assert.deepEqual(normal,['b','e']);
+  const suggested=rankGroup(places,list,3,Date.now(),['e','a','d']);
+  assert.deepEqual(suggested.items.map(item=>item.place.id),['e','b']);
+  const equal=rankGroup([
+    {id:'first',name:'가 국밥',kind:'한식',info:info({menu:['국밥 8,000원','owner']})},
+    {id:'suggested',name:'나 국밥',kind:'한식',info:info({menu:['국밥 8,000원','owner']})}
+  ],members([['가','국밥']]),3,Date.now(),['suggested']);
+  assert.equal(equal.items[0].place.id,'suggested');
+});
+
 test('a request for a snack bar never recommends a different cuisine just because its menu mentions a snack',()=>{
   const result=rankGroup([
     {id:'soup',name:'감자탕집',kind:'감자탕',category:'음식점 > 한식 > 감자탕',info:info({menu:['순대 8,000원','neighbor']})},

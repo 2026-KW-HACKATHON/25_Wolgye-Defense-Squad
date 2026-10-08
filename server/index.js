@@ -16,6 +16,8 @@ import {userDataStore} from './services/userDataStore.js';
 import {createRewardRouter,earn} from './rewardRoutes.js';
 import {rewardStore} from './services/rewardStore.js';
 import {aiReady,textModel} from './services/llm.js';
+import {communityStore} from './services/communityStore.js';
+import {postImage,postShareHtml} from './services/postShare.js';
 
 dotenv.config();
 
@@ -95,6 +97,22 @@ app.get('/api/restaurants', async (req, res) => {
 // Serve static frontend files in production
 const distPath = path.join(__dirname, '../dist');
 if (fs.existsSync(distPath)) {
+  app.get('/api/community/post-image/:id',async(req,res)=>{
+    const post=(await communityStore.posts()).find(p=>p.id===req.params.id);
+    const image=postImage(post);
+    if(!image)return res.sendStatus(404);
+    res.type(image.type).set('Cache-Control','public, max-age=3600').send(image.bytes);
+  });
+  app.get('/',async(req,res,next)=>{
+    const id=req.query.post;
+    if(typeof id!=='string'||!/^[-\w]{1,100}$/.test(id))return next();
+    const post=(await communityStore.posts()).find(p=>p.id===id);
+    if(!post)return next();
+    const protocol=req.get('x-forwarded-proto')==='https'?'https':req.protocol;
+    const url=`${protocol}://${req.get('host')}/?post=${encodeURIComponent(id)}`;
+    const html=fs.readFileSync(path.join(distPath,'index.html'),'utf8');
+    res.type('html').set('Cache-Control','no-store').send(postShareHtml(html,post,url));
+  });
   app.use(express.static(distPath));
   app.get('*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));

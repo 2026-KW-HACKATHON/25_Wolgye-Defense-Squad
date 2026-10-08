@@ -143,7 +143,7 @@ export function evaluate(place,condition){
   return checks;
 }
 
-export function rankGroup(places,members,limit=3,at=Date.now()){
+export function rankGroup(places,members,limit=3,at=Date.now(),suggestedIds=[]){
   // 사용자가 명시한 업종은 메뉴 단어가 우연히 겹친 다른 업종으로 대체하지 않는다.
   // AI가 추가한 표현은 이 필수 업종 판정을 바꿀 수 없다.
   const requiredCategories=members.map(m=>parseCondition(m.condition??m.parsed.raw).wants.filter(w=>EXPLICIT_CATEGORIES.includes(w)));
@@ -160,7 +160,8 @@ export function rankGroup(places,members,limit=3,at=Date.now()){
     return {place,perMember,violated,wantMembers,askers,met,unknown};
   });
   const eligible=scored.filter(s=>!s.violated&&(s.askers===0?s.met>0:s.wantMembers>0));
-  eligible.sort((a,b)=>b.wantMembers-a.wantMembers||b.met-a.met||a.unknown-b.unknown||a.place.name.localeCompare(b.place.name,'ko'));
+  const suggested=new Set(suggestedIds);
+  eligible.sort((a,b)=>b.wantMembers-a.wantMembers||Number(suggested.has(b.place.id))-Number(suggested.has(a.place.id))||b.met-a.met||a.unknown-b.unknown||a.place.name.localeCompare(b.place.name,'ko'));
   return {items:eligible.slice(0,limit),excluded:scored.filter(s=>s.violated).length,considered:places.length};
 }
 
@@ -180,11 +181,11 @@ export async function expandWithAI(members){
 }
 
 const STATUS={met:'충족',violated:'맞지 않음',unknown:'확인 필요',unmatched:'관련 정보 없음'};
-export async function recommendGroup(input,{getPlaces,useAI=true}={}){
+export async function recommendGroup(input,{getPlaces,useAI=true,suggestedIds=[]}={}){
   const members=input.map(m=>({name:m.name,condition:m.condition,parsed:parseCondition(m.condition)}));
   const aiUsed=useAI?await expandWithAI(members):false;
   const places=(await getPlaces()).items;
-  const ranked=rankGroup(places,members);
+  const ranked=rankGroup(places,members,3,Date.now(),suggestedIds);
   const items=ranked.items.map(s=>({...s.place,
     memberChecks:s.perMember.map(m=>({name:m.name,checks:m.checks.map(c=>({...c,statusLabel:STATUS[c.status]}))})),
     reason:`${s.wantMembers}명이 원하는 것과 관련된 가게예요. 맞지 않는 조건이 확인된 참가자는 없어요.`,

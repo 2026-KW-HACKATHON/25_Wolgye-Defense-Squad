@@ -88,8 +88,8 @@ async function getBasePlaces() {
 
 export async function getCommunityPlaces() {
   const data=await getBasePlaces();
-  const posts=await communityStore.posts(),infos=await communityStore.placeInfo(),ownerKeywords=await ownerMarketingStore.keywordMap();
-  return {...data,items:mergeSupplementalPlaces([...await communityStore.places(),...data.items]).map(p=>({...p,ownerKeywords:ownerKeywords[p.id]||[],info:publicInfo(infos[p.id]),reports:[...infoReports(infos[p.id]),...posts.filter(n=>n.placeId===p.id).map(({id,body,type,observedAt})=>({id,body,type,observedAt}))].sort((a,b)=>b.observedAt.localeCompare(a.observedAt))}))};
+  const posts=await communityStore.posts(),infos=await communityStore.placeInfo(),ownerKeywords=await ownerMarketingStore.keywordMap(),deliveryLinks=await ownerMarketingStore.deliveryLinkMap();
+  return {...data,items:mergeSupplementalPlaces([...await communityStore.places(),...data.items]).map(p=>({...p,ownerKeywords:ownerKeywords[p.id]||[],deliveryLinks:deliveryLinks[p.id]||{},info:publicInfo(infos[p.id]),reports:[...infoReports(infos[p.id]),...posts.filter(n=>n.placeId===p.id).map(({id,body,type,observedAt})=>({id,body,type,observedAt}))].sort((a,b)=>b.observedAt.localeCompare(a.observedAt))}))};
 }
 
 export function validateRecommendation(value, places, message='') {

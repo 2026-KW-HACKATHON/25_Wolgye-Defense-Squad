@@ -52,6 +52,9 @@ export function createOwnerMarketingStore(file=path.resolve('.local-data/owner-m
     removeCoupon(placeId,id){const i=data.coupons.findIndex(c=>c.id===id&&c.placeId===placeId);if(i<0)return false;data.coupons.splice(i,1);persist();return true;},
     keywords:placeId=>data.keywords.find(row=>row.placeId===placeId)?.values||[],
     keywordMap:()=>Object.fromEntries(data.keywords.map(row=>[row.placeId,row.values])),
+    deliveryLinks:placeId=>data.keywords.find(row=>row.placeId===placeId)?.deliveryLinks||{},
+    deliveryLinkMap:()=>Object.fromEntries(data.keywords.filter(row=>row.deliveryLinks).map(row=>[row.placeId,row.deliveryLinks])),
+    saveDeliveryLinks(placeId,links){const row=data.keywords.find(item=>item.placeId===placeId);if(row){row.deliveryLinks=links;row.updatedAt=new Date().toISOString();}else data.keywords.push({placeId,values:[],deliveryLinks:links,updatedAt:new Date().toISOString()});persist();return links;},
     saveKeywords(placeId,values){const row=data.keywords.find(item=>item.placeId===placeId);if(row){row.values=values;row.updatedAt=new Date().toISOString();}else data.keywords.push({placeId,values,updatedAt:new Date().toISOString()});persist();return values;}
   };
 }
@@ -80,7 +83,10 @@ export function createPostgresOwnerMarketingStore(pool){
     removeCoupon:async(placeId,id)=>(await pool.query("DELETE FROM wolgye.owner_coupons WHERE id=$1 AND data->>'placeId'=$2",[id,placeId])).rowCount>0,
     keywords:async placeId=>(await pool.query('SELECT data FROM wolgye.owner_keywords WHERE id=$1',[placeId])).rows[0]?.data.values||[],
     keywordMap:async()=>Object.fromEntries((await pool.query('SELECT id,data FROM wolgye.owner_keywords')).rows.map(r=>[r.id,r.data.values||[]])),
-    saveKeywords:async(placeId,values)=>{await upsert(pool,'owner_keywords',{placeId,values,updatedAt:new Date().toISOString()},placeId);return values;}
+    deliveryLinks:async placeId=>(await pool.query('SELECT data FROM wolgye.owner_keywords WHERE id=$1',[placeId])).rows[0]?.data.deliveryLinks||{},
+    deliveryLinkMap:async()=>Object.fromEntries((await pool.query('SELECT id,data FROM wolgye.owner_keywords')).rows.filter(r=>r.data.deliveryLinks).map(r=>[r.id,r.data.deliveryLinks])),
+    saveDeliveryLinks:async(placeId,links)=>transaction(pool,async c=>{const current=(await c.query('SELECT data FROM wolgye.owner_keywords WHERE id=$1 FOR UPDATE',[placeId])).rows[0]?.data||{placeId,values:[]};await upsert(c,'owner_keywords',{...current,deliveryLinks:links,updatedAt:new Date().toISOString()},placeId);return links;}),
+    saveKeywords:async(placeId,values)=>transaction(pool,async c=>{const current=(await c.query('SELECT data FROM wolgye.owner_keywords WHERE id=$1 FOR UPDATE',[placeId])).rows[0]?.data||{placeId};await upsert(c,'owner_keywords',{...current,values,updatedAt:new Date().toISOString()},placeId);return values;})
   };
 }
 export const ownerMarketingStore=useDatabase()?createPostgresOwnerMarketingStore(getPool()):createOwnerMarketingStore();
