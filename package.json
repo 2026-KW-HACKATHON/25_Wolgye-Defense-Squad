@@ -13,19 +13,25 @@
     "preview": "vite preview",
     "share": "node scripts/share-server.mjs",
     "discord:register": "node scripts/discord-register.mjs",
-    "discord:bot": "node scripts/discord-bot.mjs"
+    "discord:bot": "node scripts/discord-bot.mjs",
+    "db:setup": "node scripts/db-setup.mjs",
+    "demo:seed": "node scripts/demo-seed.mjs",
+    "demo:remove": "node scripts/demo-seed.mjs --remove"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
     "cors": "^2.8.5",
     "discord.js": "^14.27.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.475.0",
+    "pg": "^8.23.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",

@@ -15,7 +15,8 @@ function inRing([x,y], ring) {
 }
 export const inWolgye1 = (lat,lng) => polygons.some(rings => inRing([lng,lat],rings[0]) && !rings.slice(1).some(r=>inRing([lng,lat],r)));
 const districtBounds = L.geoJSON(boundary).getBounds();
-export default function LocationMap({places=[],onPlace,onPick,selected}) {
+// highlight: 강조할 가게 id 목록. 주면 나머지 가게는 작고 흐린 점, 강조 가게는 큰 연두색 점으로 그린다.
+export default function LocationMap({places=[],onPlace,onPick,selected,highlight}) {
   const container = useRef(null), map = useRef(null), locationLayer = useRef(null), request = useRef(0);
   const [busy, setBusy] = useState(false), [status, setStatus] = useState('월계1동 지도입니다. 내 위치는 월계1동 안에 있을 때만 표시돼요.');
   useEffect(() => {
@@ -56,10 +57,13 @@ export default function LocationMap({places=[],onPlace,onPick,selected}) {
       const box=document.createElement('div');
       const title=document.createElement('strong');title.textContent=place.name;box.append(title);
       const button=document.createElement('button');button.textContent='가게 정보 보기';button.style.display='block';button.style.padding='8px 0';button.onclick=()=>onPlace?.(place.id);box.append(button);
-      L.circleMarker([place.lat,place.lng],{radius:7,color:'#fff',weight:2,fillColor:'#193e33',fillOpacity:1}).bindPopup(box).addTo(layer);
+      const on=highlight?.includes(place.id);
+      const style=!highlight?{radius:7,color:'#fff',weight:2,fillColor:'#193e33',fillOpacity:1}:on?{radius:10,color:'#193e33',weight:3,fillColor:'#d5f65b',fillOpacity:1}:{radius:6,color:'#fff',weight:1.5,fillColor:'#193e33',fillOpacity:.45};
+      const marker=L.circleMarker([place.lat,place.lng],style).bindPopup(box).addTo(layer);
+      if(on)marker.bringToFront();
     }
     return()=>layer.remove();
-  },[places,onPlace]);
+  },[places,onPlace,highlight?.join(',')]);
   useEffect(()=>{
     if(!map.current||!onPick)return;
     const click=e=>{if(inWolgye1(e.latlng.lat,e.latlng.lng)){onPick({lat:e.latlng.lat,lng:e.latlng.lng});setStatus('선택한 위치에 새 가게를 등록합니다.');}else setStatus('월계1동 경계 안을 선택해 주세요.');};

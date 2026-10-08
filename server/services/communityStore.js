@@ -1,10 +1,13 @@
+import {getPool,useDatabase} from '../db/pool.js';
+import {createPostgresCommunityStore} from '../db/postgresStores.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
+import {applyInfoEdit,contributionStats} from './placeInfo.js';
 
 export function createCommunityStore(file=path.resolve('.local-data/community.json')) {
-  let data={places:[],posts:[]};
-  if(fs.existsSync(file))data=JSON.parse(fs.readFileSync(file,'utf8'));
+  let data={places:[],posts:[],placeInfo:{}};
+  if(fs.existsSync(file))data={...data,...JSON.parse(fs.readFileSync(file,'utf8'))};
   const persist=()=>{fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file+'.tmp',JSON.stringify(data));fs.renameSync(file+'.tmp',file);};
   const owner=token=>createHash('sha256').update(token).digest('hex');
   const publicRow=({ownerHash,...row},token)=>({...row,...(token?{mine:ownerHash===owner(token)}:{})});
@@ -19,7 +22,13 @@ export function createCommunityStore(file=path.resolve('.local-data/community.js
       if(index<0)data.posts.unshift(row);else data.posts[index]=row;
       persist();return publicRow(row,token);
     },
+    placeInfo:()=>data.placeInfo,
+    contributionStats:token=>contributionStats({posts:data.posts,places:data.places,infos:data.placeInfo,token,hash:owner}),
+    savePlaceInfo:(placeId,changes,editor)=>{const row=applyInfoEdit(data.placeInfo[placeId],placeId,changes,editor);if(!row)return null;data.placeInfo[placeId]=row;persist();return row;},
+    // 관리자 전용: 작성자와 상관없이 지운다.
+    removePostAsAdmin:id=>{const i=data.posts.findIndex(p=>p.id===id);if(i<0)return false;data.posts.splice(i,1);persist();return true;},
+    removePlaceAsAdmin:id=>{const i=data.places.findIndex(p=>p.id===id);if(i<0)return false;data.places.splice(i,1);data.posts=data.posts.filter(p=>p.placeId!==id);persist();return true;},
     removePost:(id,token)=>{const i=data.posts.findIndex(p=>p.id===id&&p.ownerHash===owner(token));if(i<0)return false;data.posts.splice(i,1);persist();return true;}
   };
 }
-export const communityStore=createCommunityStore();
+export const communityStore=useDatabase()?createPostgresCommunityStore(getPool()):createCommunityStore();

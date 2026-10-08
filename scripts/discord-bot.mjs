@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import {Client,Events,GatewayIntentBits,MessageFlags} from 'discord.js';
 import {createGroupBridge} from '../server/discord/groupBridge.js';
-import {groupMessage,conditionModal} from '../server/discord/presentation.js';
+import {groupMessage,conditionModal,decisionAnnouncement} from '../server/discord/presentation.js';
 
 if(!process.env.DISCORD_BOT_TOKEN||!process.env.DISCORD_GUILD_ID){console.error('DISCORD_BOT_TOKEN과 DISCORD_GUILD_ID를 .env에 설정해 주세요. 토큰을 채팅이나 Git에 올리지 마세요.');process.exit(1);}
 const bridge=createGroupBridge({base:process.env.DISCORD_API_BASE||'http://127.0.0.1:3001'});
@@ -28,8 +28,13 @@ client.on(Events.InteractionCreate,async i=>{
     else if(op==='condition')group=await bridge.condition(guild,user,code,i.fields.getTextInputValue('condition'));
     else if(op==='recommend')group=await bridge.recommend(guild,user,code);
     else if(op==='vote')group=await bridge.vote(guild,user,code,i.values,Number(revision));
+    else if(op==='submit')group=await bridge.submit(guild,user,code,Number(revision));
+    else if(op==='revote')group=await bridge.revote(guild,user,code);
+    else if(op==='finalize')group=await bridge.finalize(guild,user,code,revision);
     else group=await bridge.get(guild,user,code);
-    await i.editReply(groupMessage(group,process.env.PUBLIC_WEB_URL));
+    await i.editReply(groupMessage(group,process.env.PUBLIC_WEB_URL,await bridge.me(guild,user,group.id)));
+    // 최종 결정은 채널 전체에 알린다.
+    if(op==='finalize'&&group.decision)await i.followUp(decisionAnnouncement(group));
   }catch(e){
     const known=e.message&&!/fetch|connect|token|https?:|socket/i.test(e.message);
     const payload={content:known?e.message.slice(0,350):'연결을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.',embeds:[],components:[],allowedMentions:{parse:[]}};

@@ -1,6 +1,6 @@
+import { chat } from './llm.js';
 import { searchKakaoMultiQuery, fetchBlogSnippetForPlace } from './kakaoService.js';
 
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Cache recent recommended restaurants in memory for selection flow
 const recentRestaurantsCache = new Map();
@@ -21,39 +21,10 @@ const FOOD_KEYWORD_MAP = [
 ];
 
 /**
- * Call OpenRouter text model
+ * Call NVIDIA NIM API
  */
 async function callNIM(messages, options = {}) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free';
-
-  if (!apiKey) {
-    throw new Error('OPENROUTER_API_KEY is not configured in .env');
-  }
-
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: options.temperature ?? 0.6,
-      max_tokens: options.max_tokens ?? 600
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('OpenRouter API Error:', response.status, errorText);
-    if(response.status===401)throw new Error('OpenRouter API 키가 거절됐어요. .env의 OPENROUTER_API_KEY를 확인해 주세요.');
-    throw new Error(`OpenRouter API error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || '';
+  return chat(messages, { temperature: options.temperature ?? 0.6, maxTokens: options.max_tokens ?? 600 });
 }
 
 /**
@@ -211,7 +182,7 @@ export async function processChatRecommendation(userMessage, conversationHistory
     })
   );
 
-  // 6. OpenRouter 대화형 답변 생성
+  // 6. NVIDIA NIM 대화형 답변 생성
   let aiMessage = '';
   try {
     const prompt = `당신은 광운대학교 인근 로컬 미식 추천 AI 에이전트입니다.

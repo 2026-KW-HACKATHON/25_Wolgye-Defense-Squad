@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {getCommunityPlaces,recommendCommunity,selectRecommendationPool} from '../server/services/communityService.js';
-import {mergeSupplementalPlaces,supplementalPlaces} from '../server/services/supplementalPlaces.js';
+// 실제 DB 대신 파일 저장을 쓰도록 먼저 설정한 뒤 불러온다.
+process.env.DATA_STORE='file';
+const {getCommunityPlaces}=await import('../server/services/communityService.js');
+const {mergeSupplementalPlaces,supplementalPlaces}=await import('../server/services/supplementalPlaces.js');
 
 test('reported Kakao place page fills a search API gap without duplicating future API results',()=>{
   const reported=supplementalPlaces[0];
@@ -10,12 +12,6 @@ test('reported Kakao place page fills a search API gap without duplicating futur
   assert.equal(mergeSupplementalPlaces([{...reported,source:'카카오 Local'}]).filter(p=>p.id===reported.id).length,1);
 });
 
-test('recommendation pool prefers a requested cuisine while keeping its size bounded',()=>{
-  const places=Array.from({length:90},(_,i)=>({id:`p${i}`,name:`가게 ${i}`,kind:i<75?'카페':'한식',category:i<75?'카페':'음식점 > 한식'}));
-  const pool=selectRecommendationPool(places,'혼자 먹을 한식집',45);
-  assert.equal(pool.length,45);
-  assert.equal(pool.filter(place=>place.kind==='한식').length,15);
-});
 
 test('catalog splits search areas beyond Kakao’s 45-result cap',async()=>{
   const originalFetch=globalThis.fetch,originalKey=process.env.KAKAO_REST_API_KEY;
@@ -43,23 +39,5 @@ test('catalog splits search areas beyond Kakao’s 45-result cap',async()=>{
     globalThis.fetch=originalFetch;
     if(originalKey===undefined)delete process.env.KAKAO_REST_API_KEY;
     else process.env.KAKAO_REST_API_KEY=originalKey;
-  }
-});
-
-test('restaurant recommendation uses the configured OpenRouter free model',async()=>{
-  const originalFetch=globalThis.fetch,originalKey=process.env.OPENROUTER_API_KEY,originalModel=process.env.OPENROUTER_MODEL;
-  process.env.OPENROUTER_API_KEY='test-key';
-  process.env.OPENROUTER_MODEL='nvidia/nemotron-3-ultra-550b-a55b:free';
-  let called=false;
-  globalThis.fetch=async(url,options)=>{
-    assert.equal(url,'https://openrouter.ai/api/v1/chat/completions');
-    assert.equal(JSON.parse(options.body).model,process.env.OPENROUTER_MODEL);
-    called=true;
-    return {ok:true,json:async()=>({choices:[{message:{content:'{"summary":"한식","ids":[]}'}}]})};
-  };
-  try{await recommendCommunity('한식');assert.equal(called,true);}finally{
-    globalThis.fetch=originalFetch;
-    if(originalKey===undefined)delete process.env.OPENROUTER_API_KEY;else process.env.OPENROUTER_API_KEY=originalKey;
-    if(originalModel===undefined)delete process.env.OPENROUTER_MODEL;else process.env.OPENROUTER_MODEL=originalModel;
   }
 });
