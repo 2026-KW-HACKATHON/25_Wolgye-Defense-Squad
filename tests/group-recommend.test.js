@@ -7,6 +7,9 @@ test('conditions are split into wants, excludes, budget and visit hour',()=>{
   const b=parseCondition('중식은 빼고 매운 거 못 먹어요');assert.deepEqual(b.excludes,['중식','매운']);assert.deepEqual(b.wants,[]);
   const c=parseCondition('저녁 7시에 고기 먹자, 1만5천원까지');assert.equal(c.budget,15000);assert.equal(c.hour,19);assert.deepEqual(c.wants,['고기']);
   assert.equal(parseCondition('8천원 이내 분식').budget,8000);
+  assert.equal(parseCondition('가족식사할만한 식당 추천해줘').budget,null);
+  assert.equal(parseCondition('소고기만 원해요').budget,null);
+  assert.equal(parseCondition('1만 이하 식당').budget,10000);
   assert.deepEqual(menuPrices('칼국수 8,000원 / 수제비 7천원'),[8000,7000]);
   assert.deepEqual(openHours('17:00~02:00'),{open:17,close:26});
 });

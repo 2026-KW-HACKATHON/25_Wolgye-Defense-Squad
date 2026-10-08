@@ -27,12 +27,14 @@ const STOP=new Set(['저는','나는','난','우리','그냥','아무','거','�
 const known=w=>CATEGORY_WORDS.includes(w)||!!SYNONYMS[w]||Object.values(SYNONYMS).some(v=>v.includes(w));
 const josa=w=>w.replace(/(은|는|이|가|을|를|도|로|으로|이랑|랑|하고|에서|으면|면|이나|나)$/,'');
 const normalizeWant=w=>{const base=josa(w),category=base.replace(/(?:집|음식점)$/,'');return EXPLICIT_CATEGORIES.includes(category)?category:base;};
+// '할만한'의 만, '원하는'의 원은 가격 표현이 아니다.
+const MAN_PRICE=/(?<![가-힣a-zA-Z])(\d+(?:\.\d+)?)?\s*만\s*(?:(\d+|오|삼|이|일|사|육|칠|팔|구)\s*천)?\s*(?:원(?=$|\s|[,.!?)]|이하|이내|까지|미만|정도|으로|대|어치)|(?=(?:이하|이내|까지|미만)(?:\s|$)))/g;
 
 function koreanMoney(text){
   // 15000원, 1만5천원, 1.5만원, 만원, 8천원, 만오천원
   const values=[];
   // 만 단위를 먼저 읽고 지워야 "1만5천원"의 "5천원"을 따로 읽지 않는다.
-  text=text.replace(/(\d+(?:\.\d+)?)?\s*만\s*(?:(\d+|오|삼|이|일|사|육|칠|팔|구)\s*천)?\s*원?/g,(all,big,thousand)=>{
+  text=text.replace(MAN_PRICE,(all,big,thousand)=>{
     const small={일:1,이:2,삼:3,사:4,오:5,육:6,칠:7,팔:8,구:9}[thousand]??Number(thousand||0);
     values.push(Math.round(Number(big||1)*10000+small*1000));return ' ';
   });
@@ -58,7 +60,7 @@ export function parseCondition(text){
   for(const m of raw.matchAll(/(맵|짜|달|느끼하|시)지\s*않(?:게|은|는|았|고)?|(?:안|덜)\s*(맵|매|짜|달|느끼하|시)(?:운|게|은|고)?/g)){
     const w=TASTE[m[1]||m[2]];if(w&&!excludes.includes(w))excludes.push(w);rest=rest.replace(m[0],' ');
   }
-  rest=rest.replace(/(\d+(?:\.\d+)?)?\s*만\s*(\S*천)?\s*원?|\d[\d,]*\s*(원|천원|시|분)/g,' ');
+  rest=rest.replace(MAN_PRICE,' ').replace(/\d[\d,]*\s*(원|천원|시|분)/g,' ');
   const wants=[...new Set((rest.match(/[가-힣a-zA-Z]+/g)||[]).map(normalizeWant).filter(w=>w.length>=1&&!STOP.has(w)&&!excludes.includes(w)&&!/^추천/.test(w)).filter(w=>known(w)||(w.length>=2&&!/(요|자|어|아|에|게|고|서|지|니|다|면|데|죠|네)$/.test(w))))];
   return {raw,wants,excludes:[...new Set(excludes)],budget:budgets.length?Math.min(...budgets):null,hour};
 }
