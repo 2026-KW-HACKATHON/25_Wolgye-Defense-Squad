@@ -445,3 +445,9 @@
 .price-checks{display:flex;flex-direction:column;gap:6px;margin:8px 0}
 .price-check{font-size:13px;font-weight:600;padding:6px 10px;border-radius:12px;background:#f2f2f7;color:var(--muted)}
 .price-check.met{background:#eef6d6;color:var(--ink)}
+
+.role-badge.internet{background:#e8eefc;color:#2f4a8a}
+
+.post-menu-read{display:grid;gap:8px;margin:10px 0 4px}.post-menu-read>.button{justify-self:start}
+
+.place-detail-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:20px 0}.place-detail-actions .button{display:flex;flex-direction:column;gap:6px;white-space:normal;min-width:0;padding:16px}.place-detail-actions span{font-size:14px;font-weight:400}@media(max-width:420px){.place-detail-actions{grid-template-columns:1fr}}
