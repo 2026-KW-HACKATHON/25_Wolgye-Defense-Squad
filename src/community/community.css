@@ -344,3 +344,106 @@
 @media(max-width:760px){.search-panel{padding:20px 20px 16px!important}.search-panel textarea{font-size:16px;min-height:84px}}
 
 .community .button.admin-danger{color:#b42318!important;background:#fde8e6!important;margin-top:10px}
+
+.secret-check{display:flex!important;align-items:flex-start;gap:10px;margin:12px 0;font-weight:700;font-size:14px;cursor:pointer}.secret-check input{width:20px;height:20px;accent-color:#173d32;margin-top:2px;flex:none}.secret-check small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+
+/* 검색 이해 칩 (검색창 안) */
+.token-box{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:96px;align-content:flex-start;padding:2px 0}
+.token{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:7px 8px 7px 13px;font-size:15px;font-weight:700;background:#7676801f;animation:pillIn .35s cubic-bezier(.34,1.56,.64,1) both}
+.token.want{background:var(--lime)}.token.no{background:#ffe9e6;color:#b42318}
+.token button{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:15px;line-height:1;color:inherit;opacity:.55;padding:0!important}
+.token button:hover{opacity:1;background:#0000000f}
+.token-box input{flex:1;min-width:140px;border:0;outline:none;background:transparent;font-size:16px;padding:6px 4px;color:var(--ink)}
+.token-box input::placeholder{color:#a5a8ad}
+.token-edit{font-size:13px!important;color:var(--muted)!important}
+.search-note{font-size:13px;color:var(--muted);margin:10px 2px 0}
+/* 골목냥 메시지 */
+.cat-message{display:flex;align-items:center;gap:16px;margin:16px 0;padding:16px 20px;background:#fff;border-radius:22px;box-shadow:0 1px 2px #0000000a,0 4px 16px #00000008;animation:rise .45s cubic-bezier(.2,.8,.2,1) both}
+.cat-message svg{flex:none}
+.cat-message b{display:block;font-size:16px;margin-bottom:3px}
+.cat-message p{margin:0;font-size:14px;color:#555;line-height:1.5}
+.cat-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.cat-actions .button{padding:7px 14px!important;font-size:13px!important}
+.cat-progress{height:6px;border-radius:999px;background:#7676801f;margin-top:10px;overflow:hidden;max-width:260px}
+.cat-progress i{display:block;height:100%;width:40%;border-radius:999px;background:var(--lime);animation:catBar 1.4s ease-in-out infinite}
+@keyframes catBar{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+.cat-dots:after{content:'…';display:inline-block;width:1.2em;animation:catDots 1.2s steps(3) infinite}
+@keyframes catDots{0%{content:'.'}33%{content:'..'}66%{content:'...'}}
+.golmok-cat.mood-search{animation:catPeek 1.6s ease-in-out infinite}
+.golmok-cat.mood-happy,.golmok-cat.mood-sleep{animation:orbFloat 4s ease-in-out infinite}
+@keyframes catPeek{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@media(max-width:760px){.cat-message{padding:14px;gap:12px}.cat-message svg{width:64px;height:auto}}
+.search-panel .token-box .token{font-size:15px!important;margin:0!important}
+.search-panel .token-box{gap:8px!important}
+
+/* 골목냥 키우기 */
+.pet-card{position:relative;margin:8px 0 18px;padding:26px 22px 22px;border-radius:28px;text-align:center;background:radial-gradient(circle at 75% 15%,#f4ffc9,transparent 55%),linear-gradient(160deg,#eaf7c8,#cfe9a8);box-shadow:0 1px 2px #0000000a}
+.pet-speech{display:inline-block;max-width:90%;background:#fff;border-radius:18px 18px 18px 4px;padding:9px 14px;font-size:14px;font-weight:700;box-shadow:0 4px 12px #00000012;animation:rise .4s both}
+.pet-stage{position:relative;margin:8px auto 4px;width:fit-content}
+.pet-stage .golmok-cat{animation:orbFloat 4s ease-in-out infinite}
+.pet-stage.eating .golmok-cat{animation:petJump .5s cubic-bezier(.34,1.56,.64,1) 2}
+@keyframes petJump{50%{transform:translateY(-16px) scale(1.05)}}
+.pet-yum{position:absolute;right:-30px;top:6px;font-weight:800;animation:rise .5s both}
+.pet-stats{display:flex;justify-content:space-between;max-width:360px;margin:6px auto 0;font-size:14px;font-weight:600}
+.pet-bar{height:12px;max-width:360px;margin:8px auto 14px;border-radius:999px;background:#ffffff99;overflow:hidden}.pet-bar i{display:block;height:100%;border-radius:999px;background:var(--ink);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.pet-feed{padding:11px 22px!important}
+.pet-card small{display:block;margin-top:8px}
+.rw-card{background:#fff;border-radius:22px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 2px #0000000a,0 4px 16px #00000008}
+.rw-card .row{display:flex;justify-content:space-between;align-items:center}
+.rw-card h3{margin:0 0 6px!important}
+.mission{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.rw-card h3+.mission,.rw-card .row+.mission{border-top:0}
+.mission .ic{width:36px;height:36px;flex:none;border-radius:11px;background:#f2f2f7;display:grid;place-items:center;font-size:18px}
+.mission-label{flex:1;font-size:15px}
+.mission b{font-size:13px;background:#eef6d6;border-radius:999px;padding:3px 10px}
+.mission .button{padding:6px 12px!important;font-size:13px!important}
+.mission.done{opacity:.5}
+.reward-rule{font-size:12px;margin-top:8px!important}
+.coupon{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin-top:10px;border-radius:16px;background:linear-gradient(90deg,#fffbe8,#fff);border:1px dashed #e8d58a}
+.coupon p{margin:2px 0 0;font-size:14px}.coupon em{font-style:normal;color:var(--muted);font-size:12px}
+.coupon.locked{opacity:.6;filter:grayscale(.4)}.coupon.used{opacity:.5}
+.coupon-state{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap}
+.ledger-row{display:flex;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:14px}.ledger-row b.minus{color:#b42318}
+.reward-celebrate{margin:4px 0 14px;padding:12px 16px;border-radius:16px;background:var(--lime);font-weight:800;cursor:pointer;animation:sheetIn .45s both}
+.reward-row{font-weight:700}.reward-row-cat{font-size:18px}
+/* 배너의 골목냥 장 */
+.featured.cat .featured-art{background:radial-gradient(circle at 80% 25%,#fff3d6 0,transparent 45%),linear-gradient(140deg,#ffd9a8 0%,#f6b56b 55%,#e48d4a 100%)}
+.featured.cat .featured-art .art-orb{background:none;border:0;box-shadow:none;backdrop-filter:none;width:auto;height:auto;right:10%;top:10%}
+.featured.cat .featured-art .art-orb svg{width:150px;height:auto;opacity:1;filter:none}
+.featured.cat:after{background:linear-gradient(180deg,transparent 35%,#5a2e0ed0 100%)}
+.featured.cat .featured-kicker{color:#fff3d6}
+@media(max-width:760px){.featured.cat .featured-art .art-orb svg{width:104px}}
+/* 예전 리워드 카드 스타일(가로 배치)을 덮어씀 */
+.community .rw-card{display:block!important;border:0!important;margin-top:0!important}
+.community .rw-card p{font-size:13px}
+
+/* 찾기: 말로 입력 옆 '문장으로 고치기', 안내 문구 간격, 결과 화면 칩 영역 높이 */
+.search-tools{display:flex;align-items:center;gap:18px}
+.search-panel .token-box{min-height:52px}
+.community .search-note{margin:18px 4px 6px!important}
+.token-edit{font-weight:700!important}
+/* 소식 상세: 버튼 사이 간격 */
+.community .button.admin-danger{margin-left:10px}
+.community .search-note{margin:28px 4px 8px!important}
+.community .modal .button+.button.admin-danger{margin-left:14px!important}
+.community .rw-card .coupon{width:100%}
+.community .location-note{display:block;margin:14px 18px 16px!important;padding:0!important}
+
+/* 사장님 포스터: 카드 배지·표지, 가게 상세 */
+.promo-badge{display:inline-block;margin-bottom:6px;padding:4px 10px;border-radius:999px;background:var(--lime);color:var(--ink);font-size:12px;font-weight:800}
+.community .poster-cover{object-position:top}
+.detail-promo{margin:14px 0 18px}
+.detail-promo img{display:block;width:100%;max-width:420px;margin:0 auto;border-radius:18px;box-shadow:0 8px 24px #173d321f}
+.detail-promo small{display:block;text-align:center;margin-top:8px;color:var(--muted);font-size:12px}
+
+/* 메뉴판 사진으로 채우기 */
+.menu-photo-pick{display:grid!important;gap:4px;place-items:center;text-align:center;margin:14px 0;padding:18px;border-radius:18px;border:2px dashed #c9dd8a;background:#f8fde9;cursor:pointer}
+.menu-photo-pick input{display:none}
+.menu-photo-pick span{font-weight:800;font-size:16px}
+.menu-photo-pick small{color:var(--muted);font-weight:500}
+.menu-read-note{margin:-4px 0 10px;padding:10px 14px;border-radius:14px;background:var(--lime);font-weight:700;font-size:14px}
+
+/* 찾기: 예산·시간 판정 결과 */
+.price-checks{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.price-check{font-size:13px;font-weight:600;padding:6px 10px;border-radius:12px;background:#f2f2f7;color:var(--muted)}
+.price-check.met{background:#eef6d6;color:var(--ink)}

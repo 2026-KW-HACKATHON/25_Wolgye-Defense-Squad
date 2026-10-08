@@ -18,7 +18,7 @@ const districtBounds = L.geoJSON(boundary).getBounds();
 // highlight: 강조할 가게 id 목록. 주면 나머지 가게는 작고 흐린 점, 강조 가게는 큰 연두색 점으로 그린다.
 export default function LocationMap({places=[],onPlace,onPick,selected,highlight}) {
   const container = useRef(null), map = useRef(null), locationLayer = useRef(null), request = useRef(0);
-  const [busy, setBusy] = useState(false), [status, setStatus] = useState('월계1동 지도입니다. 내 위치는 월계1동 안에 있을 때만 표시돼요.');
+  const [busy, setBusy] = useState(false), [status, setStatus] = useState('');
   useEffect(() => {
     const instance = L.map(container.current, {maxBounds:districtBounds, maxBoundsViscosity:1}).fitBounds(districtBounds);
     instance.setMinZoom(instance.getBoundsZoom(districtBounds));
@@ -75,21 +75,21 @@ export default function LocationMap({places=[],onPlace,onPick,selected,highlight
       setStatus('현재 위치는 HTTPS 주소 또는 localhost의 지원 브라우저에서 사용할 수 있어요.'); return;
     }
     const id = ++request.current;
-    setBusy(true); setStatus('위치를 확인하고 있어요. 브라우저의 위치 권한을 허용해 주세요.');
+    setBusy(true); setStatus('위치를 확인하고 있어요…');
     navigator.geolocation.getCurrentPosition(({coords}) => {
       if (id !== request.current || !map.current) return;
       const point = [coords.latitude, coords.longitude];
       locationLayer.current?.remove();
       if (!inWolgye1(coords.latitude, coords.longitude)) {
         locationLayer.current = null;
-        setBusy(false);setStatus('현재 위치가 월계1동 밖으로 확인됐어요. 지도는 월계1동을 계속 표시합니다.');return;
+        setBusy(false);setStatus('지금 월계1동 밖에 있어서 내 위치는 표시하지 않았어요.');return;
       }
       locationLayer.current = L.layerGroup([
         L.circle(point, {radius: coords.accuracy, color:'#3478dc', weight:1, fillOpacity:.1}),
         L.circleMarker(point, {radius:9, color:'#fff', weight:3, fillColor:'#2474e8', fillOpacity:1}).bindPopup('내 현재 위치')
       ]).addTo(map.current);
       map.current.setView(point, 16);
-      setBusy(false); setStatus(`현재 위치 표시 · 기기에서 제공한 정확도 약 ${Math.round(coords.accuracy).toLocaleString()}m. 위치는 방문 인증이 아닙니다.`);
+      setBusy(false); setStatus(`내 위치를 표시했어요 (오차 약 ${Math.round(coords.accuracy).toLocaleString()}m)`);
     }, error => {
       if (id !== request.current) return;
       setBusy(false);
@@ -99,7 +99,7 @@ export default function LocationMap({places=[],onPlace,onPick,selected,highlight
   return <section className="location-map-panel">
     <div className="location-map-toolbar"><b>월계1동 골목 지도</b><div><button type="button" className="button outline" onClick={()=>map.current?.fitBounds(districtBounds)}>동네 전체</button><button type="button" className="button dark" onClick={locate} disabled={busy}><MapPin size={18}/>{busy?'확인 중…':'내 위치'}</button></div></div>
     <div ref={container} className="live-location-map" aria-label="현재 위치를 확인할 수 있는 실제 지도"/>
-    <p role="status" className="location-status">{status}</p>
-    <small className="location-note">초록 점은 등록된 월계1동 가게입니다. 위치는 버튼을 누를 때 한 번 확인하며 이동 경로는 저장하지 않아요. 지도 제공자에게 표시 영역의 지도 요청이 전송됩니다.</small>
+    {status&&<p role="status" className="location-status">{status}</p>}
+    <small className="location-note">📍 내 위치는 버튼을 누를 때만 확인하고 저장하지 않아요.</small>
   </section>;
 }

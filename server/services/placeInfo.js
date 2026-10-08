@@ -1,5 +1,5 @@
 // 가게 정보는 로그인한 누구나 고칠 수 있다. 항목마다 마지막으로 고친 사람의 역할(owner/neighbor)과 확인 날짜를 남긴다.
-export const INFO_FIELDS={menu:{label:'메뉴·가격',max:500},hours:{label:'영업시간',max:200},notice:{label:'기타 안내',max:300}};
+export const INFO_FIELDS={menu:{label:'메뉴·가격',max:1000},hours:{label:'영업시간',max:200},notice:{label:'기타 안내',max:300}};
 
 export function applyInfoEdit(old,placeId,changes,editor){
   const now=new Date().toISOString();

@@ -2,9 +2,10 @@ import express from 'express';
 import {communityStore} from './services/communityStore.js';
 import {getCommunityPlaces,inDistrict} from './services/communityService.js';
 import {INFO_FIELDS,publicInfo} from './services/placeInfo.js';
+import {readMenuPhoto} from './services/llm.js';
 const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&Number.isFinite(Date.parse(d))&&new Date(d).toISOString().slice(0,10)===d&&d<=new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});
 const clean=(value,max)=>typeof value==='string'?value.trim().slice(0,max):'';
-export function createContributionRouter({store=communityStore,catalog=getCommunityPlaces,requireAccount=false,roleFor=async()=>'neighbor'}={}) {
+export function createContributionRouter({store=communityStore,catalog=getCommunityPlaces,requireAccount=false,roleFor=async()=>'neighbor',onEarn=async()=>0,onRevoke=async()=>{}}={}) {
   const router=express.Router();let start=Date.now(),writes=0;
   router.use((req,res,next)=>{
     const token=req.get('authorization')?.replace(/^Bearer /,'');
@@ -51,9 +52,25 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
       p.authorRole=await roleFor(req,p.placeId);
       const post=await store.savePost(p,req.contributor,req.params.id);
       if(!post)return res.status(403).json({error:'내가 작성한 소식만 수정할 수 있어요.'});
-      res.json({post});
+      const earned=req.params.id?0:await onEarn(req,{amount:p.image?'photoPost':'post',reason:p.image?'사진 있는 소식':'소식 올리기',refKey:`post:${post.id}`}).catch(()=>0);
+      res.json({post,earned});
     }catch{res.status(502).json({error:'소식을 저장하지 못했어요. 다시 시도해 주세요.'});}
   }
+  // 메뉴판 사진 → 메뉴·가격 읽기. 저장하지 않고 결과만 돌려준다(사람이 확인한 뒤 가게 정보로 저장).
+  let menuReads=0,menuWindow=Date.now();
+  router.post('/places/:id/menu-photo',async(req,res)=>{
+    try{
+      if(Date.now()-menuWindow>3600000){menuWindow=Date.now();menuReads=0;}
+      if(menuReads++>=120)return res.status(429).json({error:'메뉴판 읽기 요청이 많아요. 잠시 후 다시 시도해 주세요.'});
+      const image=typeof req.body?.image==='string'?req.body.image:'';
+      const m=/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(image);
+      if(!m||Buffer.from(m[2],'base64').length>2*1024*1024)return res.status(400).json({error:'2MB 이하의 JPG·PNG·WebP 사진을 올려 주세요.'});
+      if(!(await catalog()).items.some(x=>x.id===req.params.id))return res.status(404).json({error:'가게를 찾지 못했어요.'});
+      const out=await readMenuPhoto(image);
+      const line=out.items.map(i=>`${i.name} ${i.price?i.price.toLocaleString('ko-KR')+'원':'(가격 확인 필요)'}`).join(' / ');
+      res.json({...out,text:[line,out.notes&&out.notes!=='메뉴판이 아님'?`(${out.notes})`:''].filter(Boolean).join(' ')});
+    }catch(e){res.status(e.status||502).json({error:e.status?e.message:'메뉴판을 읽지 못했어요. 다시 시도해 주세요.'});}
+  });
   router.put('/places/:id/info',async(req,res)=>{
     try{
       const b=req.body||{},fields={};
@@ -64,12 +81,13 @@ export function createContributionRouter({store=communityStore,catalog=getCommun
       if(!(await catalog()).items.some(x=>x.id===req.params.id))return res.status(404).json({error:'가게를 찾지 못했어요.'});
       const info=await store.savePlaceInfo(req.params.id,fields,{role:await roleFor(req,req.params.id),author,observedAt,editorHash:req.contributor});
       if(!info)return res.status(400).json({error:'바뀐 내용이 없어요.'});
-      res.json({info:publicInfo(info)});
+      const earned=await onEarn(req,{amount:'info',reason:'가게 정보 보태기',key:`info:${req.params.id}`}).catch(()=>0);
+      res.json({info:publicInfo(info),earned});
     }catch{res.status(502).json({error:'가게 정보를 저장하지 못했어요. 다시 시도해 주세요.'});}
   });
   router.post('/posts',save);router.put('/posts/:id',save);
   // 관리자는 누구의 소식이든, 이웃이 등록한 장소든 지울 수 있다(부적절한 글 대응).
   router.delete('/places/:id',async(req,res)=>{try{if(!req.isAdmin)return res.status(403).json({error:'관리자만 장소를 지울 수 있어요.'});if(!req.params.id.startsWith('local-'))return res.status(400).json({error:'이웃이 등록한 장소만 지울 수 있어요.'});if(!await store.removePlaceAsAdmin(req.params.id))return res.status(404).json({error:'장소를 찾지 못했어요.'});res.json({ok:true});}catch{res.status(503).json({error:'장소를 지우지 못했어요.'});}});
-  router.delete('/posts/:id',async(req,res)=>{try{if(req.isAdmin&&await store.removePostAsAdmin(req.params.id))return res.json({ok:true});if(!await store.removePost(req.params.id,req.contributor))return res.status(403).json({error:'내가 작성한 소식만 삭제할 수 있어요.'});res.json({ok:true});}catch{res.status(503).json({error:'공용 저장소에 연결할 수 없어 삭제하지 못했어요.'});}});
+  router.delete('/posts/:id',async(req,res)=>{try{if(req.isAdmin&&await store.removePostAsAdmin(req.params.id)){await onRevoke(`post:${req.params.id}`).catch(()=>{});return res.json({ok:true});}if(!await store.removePost(req.params.id,req.contributor))return res.status(403).json({error:'내가 작성한 소식만 삭제할 수 있어요.'});res.json({ok:true});}catch{res.status(503).json({error:'공용 저장소에 연결할 수 없어 삭제하지 못했어요.'});}});
   return router;
 }
